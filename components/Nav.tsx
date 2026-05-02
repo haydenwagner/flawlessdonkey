@@ -73,10 +73,13 @@ export default function Nav() {
               <div className="mt-8 space-y-4">
                 <button
                   type="button"
-                  disabled
-                  className="w-full py-2 px-2 rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 opacity-50"
+                  onClick={() => {
+                    setDrawerOpen(false)
+                    window.location.href = "/dashboard"
+                  }}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 hover:bg-white/10 transition"
                 >
-                  My Stats
+                  My Dashboard
                 </button>
                 <button
                   type="button"

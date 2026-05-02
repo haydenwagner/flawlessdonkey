@@ -10,10 +10,14 @@ interface TimeResult {
   duration_ms: number
 }
 
-export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: number }) {
+const PAGE_SIZE = 10
+
+export default function AllTimes() {
   const { user } = useAuth()
   const [times, setTimes] = useState<TimeResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasMore, setHasMore] = useState(true)
+  const [offset, setOffset] = useState(0)
 
   useEffect(() => {
     if (!user) {
@@ -21,32 +25,59 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
       return
     }
 
-    const fetchRecentTimes = async () => {
+    const fetchTimes = async () => {
       try {
         const { data, error } = await supabase
           .from("results")
           .select("id, created_at, duration_ms")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
-          .limit(10)
+          .range(0, PAGE_SIZE - 1)
 
         if (error) {
-          console.error("[RecentTimes] Error fetching results:", error)
+          console.error("[AllTimes] Error fetching times:", error)
           setTimes([])
         } else {
-          console.log("[RecentTimes] Fetched results:", data)
+          console.log("[AllTimes] Fetched initial times:", data)
           setTimes(data || [])
+          setHasMore((data?.length || 0) >= PAGE_SIZE)
         }
       } catch (error) {
-        console.error("[RecentTimes] Unexpected error:", error)
+        console.error("[AllTimes] Unexpected error:", error)
         setTimes([])
       } finally {
         setLoading(false)
       }
     }
 
-    fetchRecentTimes()
-  }, [user, refreshTrigger])
+    fetchTimes()
+  }, [user])
+
+  const loadMore = async () => {
+    if (!user) return
+
+    try {
+      const newOffset = offset + PAGE_SIZE
+      const { data, error } = await supabase
+        .from("results")
+        .select("id, created_at, duration_ms")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .range(newOffset, newOffset + PAGE_SIZE - 1)
+
+      if (error) {
+        console.error("[AllTimes] Error loading more:", error)
+        return
+      }
+
+      console.log("[AllTimes] Loaded more times:", data)
+      setTimes((prev) => [...prev, ...(data || [])])
+      setOffset(newOffset)
+      setHasMore((data?.length || 0) >= PAGE_SIZE)
+    } catch (error) {
+      console.error("[AllTimes] Unexpected error loading more:", error)
+    }
+  }
 
   const formatDuration = (ms: number) => {
     return (ms / 1000).toFixed(1)
@@ -76,8 +107,7 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
   }
 
   return (
-    <div className="mt-8 bg-slate-700 rounded-lg p-6 shadow-xl">
-      <h2 className="text-2xl font-semibold mb-4">Recent Times</h2>
+    <div>
       <div className="space-y-3">
         {times.map((result) => {
           const { dateStr, timeStr } = formatDateTime(result.created_at)
@@ -97,6 +127,14 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
           )
         })}
       </div>
+      {hasMore && (
+        <button
+          onClick={loadMore}
+          className="w-full mt-6 px-4 py-3 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-semibold transition"
+        >
+          Load More
+        </button>
+      )}
     </div>
   )
 }
