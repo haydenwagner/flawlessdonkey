@@ -74,14 +74,14 @@ export default function Nav() {
                 <button
                   type="button"
                   disabled
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 opacity-50"
+                  className="w-full py-2 px-2 rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 opacity-50"
                 >
                   My Stats
                 </button>
                 <button
                   type="button"
                   disabled
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 opacity-50"
+                  className="w-full py-2 px-2 rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 opacity-50"
                 >
                   My Team
                 </button>

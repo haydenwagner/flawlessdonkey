@@ -49,9 +49,9 @@ export default function Timer() {
       <div className="text-6xl font-mono font-bold mb-8 tracking-wider text-yellow-400">{displaySeconds} s</div>
 
       {!running ? (
-        <button onClick={start} className="w-full bg-green-600 hover:bg-green-700 text-lg py-3">Start</button>
+        <button onClick={start} className="w-full rounded-lg bg-green-600 hover:bg-green-700 text-lg py-3">Start</button>
       ) : (
-        <button onClick={handleStop} className="w-full bg-red-600 hover:bg-red-700 text-lg py-3">Stop</button>
+        <button onClick={handleStop} className="w-full rounded-lg bg-red-600 hover:bg-red-700 text-lg py-3">Stop</button>
       )}
     </div>
   )

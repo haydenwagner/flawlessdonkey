@@ -33,9 +33,9 @@ h2 {
   @apply text-2xl font-semibold mb-4;
 }
 
-button {
-  @apply px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors;
-}
+/* button {
+  @apply px-6 py-2 text-white rounded-lg font-medium transition-colors;
+} */
 
 button:disabled {
   @apply opacity-50 cursor-not-allowed;
