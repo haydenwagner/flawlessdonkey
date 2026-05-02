@@ -3,10 +3,16 @@ import { useState, useRef, useEffect } from "react"
 export function useTimer() {
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  const [pausedElapsed, setPausedElapsed] = useState(0)
   const startTimeRef = useRef<number | null>(null)
 
   const start = () => {
-    startTimeRef.current = Date.now()
+    const now = Date.now()
+    if (pausedElapsed > 0) {
+      startTimeRef.current = now - pausedElapsed
+    } else {
+      startTimeRef.current = now
+    }
     setRunning(true)
   }
 
@@ -14,14 +20,23 @@ export function useTimer() {
     if (!startTimeRef.current) return
     const duration = Date.now() - startTimeRef.current
     setElapsed(duration)
+    setPausedElapsed(duration)
     setRunning(false)
     return duration
   }
 
   const reset = () => {
-    setElapsed(0)
-    setRunning(false)
-    startTimeRef.current = null
+    if (running) {
+      startTimeRef.current = Date.now()
+      setElapsed(0)
+      setPausedElapsed(0)
+      // Keep running
+    } else {
+      setElapsed(0)
+      setRunning(false)
+      setPausedElapsed(0)
+      startTimeRef.current = null
+    }
   }
 
   useEffect(() => {
