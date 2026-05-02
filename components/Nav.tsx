@@ -88,28 +88,68 @@ export default function Nav() {
                 <div className="text-sm text-slate-300 text-center px-4">{user?.email}</div>
               </div>
 
-              <div className="mt-12 space-y-4">
+              <div className="mt-12 grid grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => handleNavClick("/")}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 hover:bg-white/10 transition"
+                  className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative"
                 >
-                  Timer
+                  <div className="absolute top-0 bottom-0 left-0 w-10 bg-green-600 rounded-l-[32px]"></div>
+                  <div className="relative p-2 flex items-center gap-4">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-6 w-6 text-white flex-shrink-0 z-10 relative"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12,6 12,12 16,14" />
+                    </svg>
+                    <div>
+                      <div className="text-base font-semibold text-slate-100">Timer</div>
+                      {/* <div className="text-sm text-slate-400">Track your runs</div> */}
+                    </div>
+                  </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleNavClick("/dashboard")}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 hover:bg-white/10 transition"
+                  className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative"
                 >
-                  My Dashboard
+                  <div className="absolute top-0 bottom-0 left-0 w-10 bg-amber-500 rounded-l-[32px]"></div>
+                  <div className="relative p-2 flex items-center gap-4">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-6 w-6 text-white flex-shrink-0 z-10 relative"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="23,6 13.5,15.5 8.5,10.5 1,18" />
+                      <polyline points="17,6 23,6 23,12" />
+                    </svg>
+                    <div>
+                      <div className="text-base font-semibold text-slate-100">Dashboard</div>
+                      {/* <div className="text-sm text-slate-400">View your stats</div> */}
+                    </div>
+                  </div>
                 </button>
-                <button
-                  type="button"
-                  disabled
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 opacity-50"
-                >
-                  My Team
-                </button>
+              </div>
+              <div className="mt-4 rounded-[32px] border border-white/10 bg-white/5 p-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-3xl bg-slate-700 flex items-center justify-center text-2xl text-white">
+                    T
+                  </div>
+                  <div>
+                    <div className="text-base font-semibold text-slate-100">My Team</div>
+                    <div className="text-sm text-slate-400">Team name, members, and activity</div>
+                  </div>
+                </div>
               </div>
             </div>
 
