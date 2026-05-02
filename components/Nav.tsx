@@ -2,11 +2,14 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/components/AuthProvider"
 
 export default function Nav() {
-  const { user } = useAuth()
+  const { user, hasBeenLoggedIn } = useAuth()
+  const pathname = usePathname()
+  const router = useRouter()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   const displayName = user?.email || user?.user_metadata?.full_name || ""
@@ -17,12 +20,27 @@ export default function Nav() {
     setDrawerOpen(false)
   }
 
+  const handleNavClick = (href: string) => {
+    if (pathname === href) {
+      setDrawerOpen(false)
+    } else {
+      setDrawerOpen(false)
+      router.push(href)
+    }
+  }
+
   return (
     <>
       <nav className="flex items-center justify-between mb-8">
-        <div className="text-3xl font-bold">Donkey</div>
+        <button
+          type="button"
+          onClick={() => handleNavClick("/")}
+          className="text-3xl font-bold hover:text-yellow-400 transition cursor-pointer"
+        >
+          Donkey
+        </button>
 
-        {user ? (
+        {(user || hasBeenLoggedIn) ? (
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -63,20 +81,24 @@ export default function Nav() {
             </div>
 
             <div className="flex-1">
-              <div className="flex h-1/3 flex-col items-center justify-center gap-4">
+              <div className="mt-8 flex flex-col items-center gap-4">
                 <div className="h-28 w-28 rounded-full bg-indigo-500 text-white flex items-center justify-center text-6xl font-bold shadow-lg">
                   {initial}
                 </div>
                 <div className="text-sm text-slate-300 text-center px-4">{user?.email}</div>
               </div>
 
-              <div className="mt-8 space-y-4">
+              <div className="mt-12 space-y-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setDrawerOpen(false)
-                    window.location.href = "/dashboard"
-                  }}
+                  onClick={() => handleNavClick("/")}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 hover:bg-white/10 transition"
+                >
+                  Timer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick("/dashboard")}
                   className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 hover:bg-white/10 transition"
                 >
                   My Dashboard
@@ -84,7 +106,7 @@ export default function Nav() {
                 <button
                   type="button"
                   disabled
-                  className="w-full py-2 px-2 rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 opacity-50"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-left text-base font-semibold text-slate-100 opacity-50"
                 >
                   My Team
                 </button>

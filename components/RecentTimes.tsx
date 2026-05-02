@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/components/AuthProvider"
 
 interface TimeResult {
   id: string
@@ -68,7 +68,25 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
   }
 
   if (loading) {
-    return <div className="text-slate-400">Loading times...</div>
+    return (
+      <div className="mt-8 bg-slate-700 rounded-lg p-6 shadow-xl">
+        <h2 className="text-2xl font-semibold mb-4">Recent Times</h2>
+        <div className="space-y-3">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <div
+              key={index}
+              className="flex items-center justify-between bg-slate-600 rounded-lg p-4 animate-pulse"
+            >
+              <div className="flex-1">
+                <div className="h-4 bg-slate-500 rounded w-24 mb-2"></div>
+                <div className="h-3 bg-slate-500 rounded w-32"></div>
+              </div>
+              <div className="h-6 bg-slate-500 rounded w-16"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (times.length === 0) {

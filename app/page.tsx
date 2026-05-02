@@ -4,7 +4,7 @@ import { useState } from "react"
 import Timer from "../components/Timer"
 import Nav from "../components/Nav"
 import RecentTimes from "../components/RecentTimes"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/components/AuthProvider"
 
 export default function HomePage() {
   const { user } = useAuth()

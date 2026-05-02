@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useTimer } from "../hooks/useTimer"
 import { supabase } from "@/lib/supabaseClient"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/components/AuthProvider"
 
 export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const { running, elapsed, start, stop, reset } = useTimer()

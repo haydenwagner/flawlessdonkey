@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/components/AuthProvider"
 
 interface Stats {
   totalRuns: number
@@ -73,7 +73,19 @@ export default function UserStats() {
   }
 
   if (loading) {
-    return <div className="text-slate-400">Loading stats...</div>
+    return (
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="bg-slate-700 rounded-lg p-6 shadow-xl animate-pulse"
+          >
+            <div className="h-4 bg-slate-500 rounded w-20 mb-2"></div>
+            <div className="h-8 bg-slate-500 rounded w-16"></div>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   if (!stats) {
