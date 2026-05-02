@@ -5,7 +5,7 @@ import { useTimer } from "../hooks/useTimer"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/hooks/useAuth"
 
-export default function Timer() {
+export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const { running, elapsed, start, stop, reset } = useTimer()
   const { user } = useAuth()
   const [saving, setSaving] = useState(false)
@@ -30,6 +30,9 @@ export default function Timer() {
           duration_ms: elapsed,
         })
         console.log("[Timer] Insert result:", result)
+        reset()
+        console.log("[Timer] Timer reset after successful save")
+        onSaveSuccess?.()
       } else {
         console.log("[Timer] User not logged in. Skipping DB save.")
       }
