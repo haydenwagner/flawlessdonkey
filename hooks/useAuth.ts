@@ -26,6 +26,6 @@ export function useAuth() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  console.log("[useAuth] Returning user:", user ? `${user.id} (${user.email})` : "null")
+//   console.log("[useAuth] Returning user:", user ? `${user.id} (${user.email})` : "null")
   return { user }
 }

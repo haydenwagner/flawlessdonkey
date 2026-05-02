@@ -16,12 +16,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div>
-      <h1>Login</h1>
-
-      <button onClick={signInWithGoogle}>
-        Sign in with Google
-      </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white flex items-center justify-center p-4">
+      <div className="text-center">
+        <h1 className="text-5xl font-bold mb-8">Flawless Donkey</h1>
+        <div className="bg-slate-700 rounded-lg p-12 shadow-xl">
+          <h2 className="text-2xl font-semibold mb-6">Sign In</h2>
+          <button onClick={signInWithGoogle} className="w-full bg-white text-slate-900 hover:bg-gray-100 py-3">
+            Sign in with Google
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 
 export function useTimer() {
   const [running, setRunning] = useState(false)
@@ -23,6 +23,19 @@ export function useTimer() {
     setRunning(false)
     startTimeRef.current = null
   }
+
+  useEffect(() => {
+    if (!running) return
+
+    const intervalId = setInterval(() => {
+      if (startTimeRef.current) {
+        const currentElapsed = Date.now() - startTimeRef.current
+        setElapsed(currentElapsed)
+      }
+    }, 50) // Update every 50ms for smooth real-time display
+
+    return () => clearInterval(intervalId)
+  }, [running])
 
   return { running, elapsed, start, stop, reset }
 }

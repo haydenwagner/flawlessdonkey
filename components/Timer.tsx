@@ -42,14 +42,16 @@ export default function Timer() {
     }
   }
 
+  const displaySeconds = (elapsed / 1000).toFixed(1)
+
   return (
-    <div>
-      <h2>{elapsed} ms</h2>
+    <div className="text-center">
+      <div className="text-6xl font-mono font-bold mb-8 tracking-wider text-yellow-400">{displaySeconds} s</div>
 
       {!running ? (
-        <button onClick={start}>Start</button>
+        <button onClick={start} className="w-full bg-green-600 hover:bg-green-700 text-lg py-3">Start</button>
       ) : (
-        <button onClick={handleStop}>Stop</button>
+        <button onClick={handleStop} className="w-full bg-red-600 hover:bg-red-700 text-lg py-3">Stop</button>
       )}
     </div>
   )
