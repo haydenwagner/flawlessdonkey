@@ -3,34 +3,41 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
+import TimeEntryRow from "@/components/TimeEntryRow"
+import type { ResultsFilter } from "@/components/UserStats"
 
 interface TimeResult {
   id: string
   created_at: string
   duration_ms: number
+  user_id?: string
+  user_display_name?: string | null
 }
 
 const PAGE_SIZE = 10
 
-export default function AllTimes() {
+export default function AllTimes({ filter }: { filter: ResultsFilter }) {
   const { user } = useAuth()
   const [times, setTimes] = useState<TimeResult[]>([])
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
 
+  const isTeamView = filter.column === "team_id"
+
   useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
+    if (!filter.value) return
+
+    setLoading(true)
+    setTimes([])
+    setOffset(0)
 
     const fetchTimes = async () => {
       try {
         const { data, error } = await supabase
           .from("results")
-          .select("id, created_at, duration_ms")
-          .eq("user_id", user.id)
+          .select("id, created_at, duration_ms, user_id, user_display_name")
+          .eq(filter.column, filter.value)
           .order("created_at", { ascending: false })
           .range(0, PAGE_SIZE - 1)
 
@@ -38,7 +45,6 @@ export default function AllTimes() {
           console.error("[AllTimes] Error fetching times:", error)
           setTimes([])
         } else {
-          console.log("[AllTimes] Fetched initial times:", data)
           setTimes(data || [])
           setHasMore((data?.length || 0) >= PAGE_SIZE)
         }
@@ -51,17 +57,15 @@ export default function AllTimes() {
     }
 
     fetchTimes()
-  }, [user])
+  }, [filter.column, filter.value])
 
   const loadMore = async () => {
-    if (!user) return
-
     try {
       const newOffset = offset + PAGE_SIZE
       const { data, error } = await supabase
         .from("results")
-        .select("id, created_at, duration_ms")
-        .eq("user_id", user.id)
+        .select("id, created_at, duration_ms, user_id, user_display_name")
+        .eq(filter.column, filter.value)
         .order("created_at", { ascending: false })
         .range(newOffset, newOffset + PAGE_SIZE - 1)
 
@@ -70,7 +74,6 @@ export default function AllTimes() {
         return
       }
 
-      console.log("[AllTimes] Loaded more times:", data)
       setTimes((prev) => [...prev, ...(data || [])])
       setOffset(newOffset)
       setHasMore((data?.length || 0) >= PAGE_SIZE)
@@ -79,42 +82,19 @@ export default function AllTimes() {
     }
   }
 
-  const formatDuration = (ms: number) => {
-    return (ms / 1000).toFixed(1)
-  }
-
-  const formatDateTime = (isoString: string) => {
-    const date = new Date(isoString)
-    const dateStr = date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-    const timeStr = date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-    return { dateStr, timeStr }
-  }
-
   if (loading) {
     return (
-      <div>
-        <div className="space-y-3">
-          {Array.from({ length: 10 }).map((_, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between bg-slate-600 rounded-lg p-4 animate-pulse"
-            >
-              <div className="flex-1">
-                <div className="h-4 bg-slate-500 rounded w-24 mb-2"></div>
-                <div className="h-3 bg-slate-500 rounded w-32"></div>
-              </div>
-              <div className="h-6 bg-slate-500 rounded w-16"></div>
+      <div className="space-y-3">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 bg-slate-600 rounded-lg p-4 animate-pulse">
+            {isTeamView && <div className="h-9 w-9 rounded-full bg-slate-500 flex-shrink-0"></div>}
+            <div className="flex-1">
+              <div className="h-4 bg-slate-500 rounded w-24 mb-2"></div>
+              <div className="h-3 bg-slate-500 rounded w-32"></div>
             </div>
-          ))}
-        </div>
+            <div className="h-6 bg-slate-500 rounded w-16"></div>
+          </div>
+        ))}
       </div>
     )
   }
@@ -126,23 +106,21 @@ export default function AllTimes() {
   return (
     <div>
       <div className="space-y-3">
-        {times.map((result) => {
-          const { dateStr, timeStr } = formatDateTime(result.created_at)
-          return (
-            <div
-              key={result.id}
-              className="flex items-center justify-between bg-slate-600 rounded-lg p-4"
-            >
-              <div className="flex-1">
-                <div className="text-sm text-slate-300">{dateStr}</div>
-                <div className="text-xs text-slate-400">{timeStr}</div>
-              </div>
-              <div className="text-lg font-mono font-bold text-yellow-400">
-                {formatDuration(result.duration_ms)} s
-              </div>
-            </div>
-          )
-        })}
+        {times.map((result) => (
+          <TimeEntryRow
+            key={result.id}
+            id={result.id}
+            created_at={result.created_at}
+            duration_ms={result.duration_ms}
+            userId={result.user_id}
+            displayName={result.user_display_name}
+            avatarColor={
+              result.user_id === user?.id
+                ? user?.user_metadata?.avatar_color
+                : undefined
+            }
+          />
+        ))}
       </div>
       {hasMore && (
         <button

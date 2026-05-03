@@ -7,7 +7,7 @@ import { useAuth } from "@/components/AuthProvider"
 
 export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const { running, elapsed, start, stop, reset } = useTimer()
-  const { user } = useAuth()
+  const { team } = useAuth()
   const [saving, setSaving] = useState(false)
 
   const handleStop = async () => {
@@ -25,9 +25,12 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
 
       if (freshUser) {
         console.log("[Timer] User logged in. Attempting to save result to DB...")
+        const displayName = freshUser.user_metadata?.display_name || freshUser.user_metadata?.full_name || freshUser.email || null
         const result = await supabase.from("results").insert({
           user_id: freshUser.id,
           duration_ms: elapsed,
+          team_id: team?.id ?? null,
+          user_display_name: displayName,
         })
         console.log("[Timer] Insert result:", result)
         reset()

@@ -1,18 +1,31 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react"
 import { supabase } from "@/lib/supabaseClient"
+
+export interface Team {
+  id: string
+  name: string
+  code: string
+  created_by: string
+}
 
 interface AuthContextType {
   user: any
   loading: boolean
   hasBeenLoggedIn: boolean
+  team: Team | null
+  teamLoading: boolean
+  refreshTeam: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   hasBeenLoggedIn: false,
+  team: null,
+  teamLoading: false,
+  refreshTeam: async () => {},
 })
 
 export function useAuth() {
@@ -27,53 +40,76 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [hasBeenLoggedIn, setHasBeenLoggedIn] = useState(false)
+  const [team, setTeam] = useState<Team | null>(null)
+  const [teamLoading, setTeamLoading] = useState(false)
+
+  const fetchTeam = useCallback(async (userId: string) => {
+    setTeamLoading(true)
+    try {
+      const { data } = await supabase
+        .from("team_members")
+        .select("teams(id, name, code, created_by)")
+        .eq("user_id", userId)
+        .is("left_at", null)
+        .maybeSingle()
+      setTeam(((data as any)?.teams as Team) ?? null)
+    } catch {
+      setTeam(null)
+    } finally {
+      setTeamLoading(false)
+    }
+  }, [])
+
+  const refreshTeam = useCallback(async () => {
+    const { data } = await supabase.auth.getSession()
+    const userId = data.session?.user?.id
+    if (userId) await fetchTeam(userId)
+  }, [fetchTeam])
 
   useEffect(() => {
     console.log("[AuthProvider] Initializing auth provider...")
 
-    // Check localStorage for previous login state
-    const storedLoggedIn = typeof window !== 'undefined' && localStorage.getItem('hasBeenLoggedIn') === 'true'
-    if (storedLoggedIn) {
-      setHasBeenLoggedIn(true)
-    }
+    const storedLoggedIn = typeof window !== "undefined" && localStorage.getItem("hasBeenLoggedIn") === "true"
+    if (storedLoggedIn) setHasBeenLoggedIn(true)
 
-    // Get initial session
     supabase.auth.getSession().then(({ data }) => {
       const sessionUser = data.session?.user ?? null
       console.log("[AuthProvider] Initial session check - User:", sessionUser ? `${sessionUser.id} (${sessionUser.email})` : "null")
       setUser(sessionUser)
       if (sessionUser) {
         setHasBeenLoggedIn(true)
-        localStorage.setItem('hasBeenLoggedIn', 'true')
+        localStorage.setItem("hasBeenLoggedIn", "true")
+        fetchTeam(sessionUser.id)
       }
       setLoading(false)
     })
 
-    // Listen for auth changes
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        const changedUser = session?.user ?? null
-        console.log("[AuthProvider] Auth state changed - Event:", event, "User:", changedUser ? `${changedUser.id} (${changedUser.email})` : "null")
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      const changedUser = session?.user ?? null
+      console.log("[AuthProvider] Auth state changed - Event:", event, "User:", changedUser ? `${changedUser.id} (${changedUser.email})` : "null")
 
-        setUser(changedUser)
+      setUser(changedUser)
 
-        if (changedUser) {
-          setHasBeenLoggedIn(true)
-          localStorage.setItem('hasBeenLoggedIn', 'true')
-        } else if (event === 'SIGNED_OUT') {
+      if (changedUser) {
+        setHasBeenLoggedIn(true)
+        localStorage.setItem("hasBeenLoggedIn", "true")
+        fetchTeam(changedUser.id)
+      } else {
+        if (event === "SIGNED_OUT") {
           setHasBeenLoggedIn(false)
-          localStorage.removeItem('hasBeenLoggedIn')
+          localStorage.removeItem("hasBeenLoggedIn")
         }
-
-        setLoading(false)
+        setTeam(null)
       }
-    )
+
+      setLoading(false)
+    })
 
     return () => listener.subscription.unsubscribe()
-  }, [])
+  }, [fetchTeam])
 
   return (
-    <AuthContext.Provider value={{ user, loading, hasBeenLoggedIn }}>
+    <AuthContext.Provider value={{ user, loading, hasBeenLoggedIn, team, teamLoading, refreshTeam }}>
       {children}
     </AuthContext.Provider>
   )
