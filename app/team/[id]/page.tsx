@@ -7,6 +7,8 @@ import { useAuth } from "@/components/AuthProvider"
 import Nav from "@/components/Nav"
 import UserStats from "@/components/UserStats"
 import AllTimes from "@/components/AllTimes"
+import TeamActivityChart from "@/components/TeamActivityChart"
+import TeamLeaderStats from "@/components/TeamLeaderStats"
 import type { Team } from "@/components/AuthProvider"
 
 export default function TeamPage() {
@@ -114,7 +116,9 @@ export default function TeamPage() {
           )}
         </div>
 
-        <UserStats filter={{ column: "team_id", value: teamId }} />
+        <TeamActivityChart teamId={teamId} />
+        <UserStats filter={{ column: "team_id", value: teamId }} omitMinMax />
+        <TeamLeaderStats teamId={teamId} />
 
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Piss</h2>
         <AllTimes filter={{ column: "team_id", value: teamId }} />
