@@ -83,6 +83,25 @@ export default function Nav() {
     if (pathname !== href) router.push(href)
   }
 
+  const handleBack = () => {
+    switch (view) {
+      case "settings":
+      case "team-setup":
+        setView("main")
+        break
+      case "create-team":
+        setView("team-setup")
+        setTeamName("")
+        setError(null)
+        break
+      case "join-team":
+        setView("team-setup")
+        setJoinCode("")
+        setError(null)
+        break
+    }
+  }
+
   const handleCreateTeam = async () => {
     if (!teamName.trim() || !user) return
     setSubmitting(true)
@@ -141,16 +160,12 @@ export default function Nav() {
       return
     }
 
-    const { error: memberError } = await supabase
-      .from("team_members")
-      .insert({ team_id: foundTeam.id, user_id: user.id })
+    const { error: joinError } = await supabase.rpc("join_or_rejoin_team", {
+      p_team_id: foundTeam.id,
+    })
 
-    if (memberError) {
-      if (memberError.code === "23505") {
-        setError("You're already a member of this team.")
-      } else {
-        setError("Failed to join team. Please try again.")
-      }
+    if (joinError) {
+      setError("Failed to join team. Please try again.")
       setSubmitting(false)
       return
     }
@@ -214,37 +229,30 @@ export default function Nav() {
               <div className="text-sm text-slate-400 text-center px-4">{user?.email}</div>
             </div>
 
-            <div className="mt-12 grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => handleNavClick("/")}
-                className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative"
-              >
-                <div className="absolute top-0 bottom-0 left-0 w-10 bg-green-600 rounded-l-[32px]"></div>
-                <div className="relative px-2 py-3 flex items-center gap-4">
-                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white flex-shrink-0 z-10 relative" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* Full-width stacked nav cards */}
+            <div className="mt-8 space-y-3">
+              <NavCard
+                label="Timer"
+                sublabel="Start a new piss"
+                iconBgColor="bg-green-600"
+                iconContent={
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" />
                   </svg>
-                  <div className="text-base font-semibold text-slate-100">Timer</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleNavClick("/dashboard")}
-                className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative"
-              >
-                <div className="absolute top-0 bottom-0 left-0 w-10 bg-amber-500 rounded-l-[32px]"></div>
-                <div className="relative px-2 py-3 flex items-center gap-4">
-                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white flex-shrink-0 z-10 relative" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                }
+                onClick={() => handleNavClick("/")}
+              />
+              <NavCard
+                label="Dashboard"
+                sublabel="Your personal stats"
+                iconBgColor="bg-amber-500"
+                iconContent={
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="23,6 13.5,15.5 8.5,10.5 1,18" /><polyline points="17,6 23,6 23,12" />
                   </svg>
-                  <div className="text-base font-semibold text-slate-100">Dashboard</div>
-                </div>
-              </button>
-            </div>
-
-            <div className="mt-4">
+                }
+                onClick={() => handleNavClick("/dashboard")}
+              />
               {teamLoading ? (
                 <div className="rounded-[32px] border border-white/10 bg-white/5 p-5 animate-pulse">
                   <div className="flex items-center gap-4">
@@ -273,47 +281,56 @@ export default function Nav() {
                 />
               )}
             </div>
+
+            {/* Half-width grid layout (kept for reference — nice left-bar style)
+            <div className="mt-12 grid grid-cols-2 gap-4">
+              <button type="button" onClick={() => handleNavClick("/")} className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative">
+                <div className="absolute top-0 bottom-0 left-0 w-10 bg-green-600 rounded-l-[32px]"></div>
+                <div className="relative px-2 py-3 flex items-center gap-4">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white flex-shrink-0 z-10 relative" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>
+                  <div className="text-base font-semibold text-slate-100">Timer</div>
+                </div>
+              </button>
+              <button type="button" onClick={() => handleNavClick("/dashboard")} className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative">
+                <div className="absolute top-0 bottom-0 left-0 w-10 bg-amber-500 rounded-l-[32px]"></div>
+                <div className="relative px-2 py-3 flex items-center gap-4">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white flex-shrink-0 z-10 relative" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18" /><polyline points="17,6 23,6 23,12" /></svg>
+                  <div className="text-base font-semibold text-slate-100">Dashboard</div>
+                </div>
+              </button>
+            </div>
+            */}
           </div>
         )
 
       case "team-setup":
         return (
           <div className="flex-1">
-            <button type="button" onClick={() => setView("main")} className="flex items-center gap-2 text-slate-400 hover:text-white transition mt-4 text-sm">
-              ← Back
-            </button>
             <h2 className="text-xl font-bold mt-8 mb-1">Get Started</h2>
             <p className="text-sm text-slate-400 mb-8">Create a new team or join one with a code.</p>
-            <div className="space-y-4">
-              <button type="button" onClick={() => setView("create-team")} className="w-full rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative">
-                <div className="absolute top-0 bottom-0 left-0 w-10 bg-violet-600 rounded-l-[32px]"></div>
-                <div className="relative px-2 py-4 flex items-center gap-4">
-                  <div className="h-8 w-8 flex items-center justify-center text-white z-10 relative">
-                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-slate-100">Create a Team</div>
-                    <div className="text-sm text-slate-400">Start fresh, invite friends</div>
-                  </div>
-                </div>
-              </button>
-
-              <button type="button" onClick={() => setView("join-team")} className="w-full rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative">
-                <div className="absolute top-0 bottom-0 left-0 w-10 bg-cyan-600 rounded-l-[32px]"></div>
-                <div className="relative px-2 py-4 flex items-center gap-4">
-                  <div className="h-8 w-8 flex items-center justify-center text-white z-10 relative">
-                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-slate-100">Join a Team</div>
-                    <div className="text-sm text-slate-400">Enter your 6-digit code</div>
-                  </div>
-                </div>
-              </button>
+            <div className="space-y-3">
+              <NavCard
+                label="Create a Team"
+                sublabel="Start fresh, invite friends"
+                iconBgColor="bg-violet-600"
+                iconContent={
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+                  </svg>
+                }
+                onClick={() => setView("create-team")}
+              />
+              <NavCard
+                label="Join a Team"
+                sublabel="Enter your 6-digit code"
+                iconBgColor="bg-cyan-600"
+                iconContent={
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" />
+                  </svg>
+                }
+                onClick={() => setView("join-team")}
+              />
             </div>
           </div>
         )
@@ -321,9 +338,6 @@ export default function Nav() {
       case "create-team":
         return (
           <div className="flex-1">
-            <button type="button" onClick={() => { setView("team-setup"); setTeamName(""); setError(null) }} className="flex items-center gap-2 text-slate-400 hover:text-white transition mt-4 text-sm">
-              ← Back
-            </button>
             <h2 className="text-xl font-bold mt-8 mb-1">Create a Team</h2>
             <p className="text-sm text-slate-400 mb-8">Give your team a name. A 6-digit code will be generated for others to join.</p>
             <div className="space-y-4">
@@ -339,9 +353,6 @@ export default function Nav() {
       case "join-team":
         return (
           <div className="flex-1">
-            <button type="button" onClick={() => { setView("team-setup"); setJoinCode(""); setError(null) }} className="flex items-center gap-2 text-slate-400 hover:text-white transition mt-4 text-sm">
-              ← Back
-            </button>
             <h2 className="text-xl font-bold mt-8 mb-1">Join a Team</h2>
             <p className="text-sm text-slate-400 mb-8">Enter the 6-digit code from a team member.</p>
             <div className="space-y-4">
@@ -475,8 +486,8 @@ export default function Nav() {
 
           <div className="ml-auto h-full w-full max-w-sm z-20 bg-slate-900 shadow-2xl border-l border-white/10 text-white flex flex-col">
             <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
-              {view === "settings" ? (
-                <button type="button" onClick={() => setView("main")} className="text-slate-400 hover:text-white transition text-sm">
+              {view !== "main" ? (
+                <button type="button" onClick={handleBack} className="text-slate-400 hover:text-white transition text-sm">
                   ← Back
                 </button>
               ) : (

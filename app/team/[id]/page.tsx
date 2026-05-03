@@ -18,6 +18,7 @@ export default function TeamPage() {
   const [team, setTeam] = useState<Team | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [showCode, setShowCode] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -81,26 +82,47 @@ export default function TeamPage() {
 
         <h1 className="text-3xl font-bold mb-3 break-words">{team.name}</h1>
 
-        <button
-          type="button"
-          onClick={handleCopyCode}
-          className="flex items-center gap-3 mb-8 group"
-          title="Click to copy team code"
-        >
-          <div className="flex gap-1.5">
-            {team.code.split("").map((digit, i) => (
-              <span
-                key={i}
-                className="w-9 h-11 bg-slate-700 rounded-lg flex items-center justify-center text-xl font-mono font-bold text-yellow-400 shadow-inner border border-white/10"
+        <div className="mb-8">
+          {showCode ? (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleCopyCode}
+                className="flex items-center gap-3 group"
+                title="Click to copy team code"
               >
-                {digit}
-              </span>
-            ))}
-          </div>
-          <span className="text-xs text-slate-400 group-hover:text-slate-300 transition">
-            {copied ? "Copied!" : "Copy code"}
-          </span>
-        </button>
+                <div className="flex gap-1.5">
+                  {team.code.split("").map((digit, i) => (
+                    <span
+                      key={i}
+                      className="w-9 h-11 bg-slate-700 rounded-lg flex items-center justify-center text-xl font-mono font-bold text-yellow-400 shadow-inner border border-white/10"
+                    >
+                      {digit}
+                    </span>
+                  ))}
+                </div>
+                <span className="text-xs text-slate-400 group-hover:text-slate-300 transition">
+                  {copied ? "Copied!" : "Copy"}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCode(false)}
+                className="text-xs text-slate-500 hover:text-slate-400 transition"
+              >
+                Hide
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowCode(true)}
+              className="text-sm text-slate-400 hover:text-slate-300 transition underline underline-offset-2 decoration-slate-600"
+            >
+              Show invite code
+            </button>
+          )}
+        </div>
 
         <UserStats filter={{ column: "team_id", value: teamId }} />
 
