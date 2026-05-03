@@ -5,7 +5,10 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
+import Image from "next/image";
 
+
+//todo user can still scroll on the screen when the drawer is open, need to fix that
 export default function Nav() {
   const { user, hasBeenLoggedIn } = useAuth()
   const pathname = usePathname()
@@ -37,7 +40,13 @@ export default function Nav() {
           onClick={() => handleNavClick("/")}
           className="text-3xl font-bold hover:text-yellow-400 transition cursor-pointer"
         >
-          Donkey
+          <Image
+          src="/logo.png"
+          alt="Site Logo"
+          width={100}
+          height={40}
+          priority
+        />
         </button>
 
         {(user || hasBeenLoggedIn) ? (
@@ -95,7 +104,7 @@ export default function Nav() {
                   className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative"
                 >
                   <div className="absolute top-0 bottom-0 left-0 w-10 bg-green-600 rounded-l-[32px]"></div>
-                  <div className="relative p-2 flex items-center gap-4">
+                  <div className="relative px-2 py-3 flex items-center gap-4">
                     <svg
                       viewBox="0 0 24 24"
                       className="h-6 w-6 text-white flex-shrink-0 z-10 relative"
@@ -120,7 +129,7 @@ export default function Nav() {
                   className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative"
                 >
                   <div className="absolute top-0 bottom-0 left-0 w-10 bg-amber-500 rounded-l-[32px]"></div>
-                  <div className="relative p-2 flex items-center gap-4">
+                  <div className="relative px-2 py-3 flex items-center gap-4">
                     <svg
                       viewBox="0 0 24 24"
                       className="h-6 w-6 text-white flex-shrink-0 z-10 relative"
@@ -134,6 +143,7 @@ export default function Nav() {
                       <polyline points="17,6 23,6 23,12" />
                     </svg>
                     <div>
+                      {/* todo make this a component so I can include this in the timer after recent piss */}
                       <div className="text-base font-semibold text-slate-100">Dashboard</div>
                       {/* <div className="text-sm text-slate-400">View your stats</div> */}
                     </div>

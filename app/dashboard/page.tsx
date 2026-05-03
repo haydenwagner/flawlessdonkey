@@ -25,12 +25,13 @@ export default function UserDashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8">
       <div className="max-w-2xl mx-auto">
         <Nav />
-        <h1 className="text-4xl font-bold mb-8">Your Dashboard</h1>
+        {/* Todo style this username better, have a card with image or somethign and the team will get this eventually */}
+        <h1 className="text-3xl font-bold mb-6 break-words">{user?.email.split("@")[0]}</h1>
         
         <UserStats />
         
         <div className="bg-slate-700 rounded-lg p-6 shadow-xl">
-          <h2 className="text-2xl font-semibold mb-6">All Times</h2>
+          <h2 className="text-2xl font-semibold mb-6">All Piss</h2>
           <AllTimes />
         </div>
       </div>

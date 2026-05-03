@@ -28,7 +28,7 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
           .select("id, created_at, duration_ms")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
-          .limit(10)
+          .limit(5)
 
         if (error) {
           console.error("[RecentTimes] Error fetching results:", error)
@@ -70,7 +70,7 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
   if (loading) {
     return (
       <div className="mt-8 bg-slate-700 rounded-lg p-6 shadow-xl">
-        <h2 className="text-2xl font-semibold mb-4">Recent Times</h2>
+        <h2 className="text-2xl font-semibold mb-4">Recent Piss</h2>
         <div className="space-y-3">
           {Array.from({ length: 10 }).map((_, index) => (
             <div
@@ -95,7 +95,7 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
 
   return (
     <div className="mt-8 bg-slate-700 rounded-lg p-6 shadow-xl">
-      <h2 className="text-2xl font-semibold mb-4">Recent Times</h2>
+      <h2 className="text-2xl font-semibold mb-4">Recent Piss</h2>
       <div className="space-y-3">
         {times.map((result) => {
           const { dateStr, timeStr } = formatDateTime(result.created_at)

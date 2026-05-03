@@ -94,21 +94,21 @@ export default function UserStats() {
 
   return (
     <div className="grid grid-cols-2 gap-4 mb-8">
-      <div className="bg-slate-700 rounded-lg p-6 shadow-xl">
-        <div className="text-sm text-slate-400 mb-2">Total Runs</div>
+      <div className="bg-slate-700 rounded-lg p-5 shadow-xl">
+        <div className="text-sm text-slate-400 mb-2">Total Piss</div>
         <div className="text-3xl font-bold text-yellow-400">{stats.totalRuns}</div>
       </div>
-      <div className="bg-slate-700 rounded-lg p-6 shadow-xl">
-        <div className="text-sm text-slate-400 mb-2">Average Time</div>
+      <div className="bg-slate-700 rounded-lg p-5 shadow-xl">
+        <div className="text-sm text-slate-400 mb-2">Average Piss</div>
         <div className="text-3xl font-bold text-yellow-400">{formatTime(stats.averageTime)} s</div>
       </div>
-      <div className="bg-slate-700 rounded-lg p-6 shadow-xl">
-        <div className="text-sm text-slate-400 mb-2">Best Time</div>
-        <div className="text-3xl font-bold text-green-400">{formatTime(stats.bestTime)} s</div>
+      <div className="bg-slate-700 rounded-lg p-5 shadow-xl">
+        <div className="text-sm text-slate-400 mb-2">Worst Piss</div>
+        <div className="text-3xl font-bold text-red-400">{formatTime(stats.bestTime)} s</div>
       </div>
-      <div className="bg-slate-700 rounded-lg p-6 shadow-xl">
-        <div className="text-sm text-slate-400 mb-2">Worst Time</div>
-        <div className="text-3xl font-bold text-red-400">{formatTime(stats.worstTime)} s</div>
+      <div className="bg-slate-700 rounded-lg p-5 shadow-xl">
+        <div className="text-sm text-slate-400 mb-2">Best Piss</div>
+        <div className="text-3xl font-bold text-green-400">{formatTime(stats.worstTime)} s</div>
       </div>
     </div>
   )
