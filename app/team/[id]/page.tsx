@@ -82,33 +82,23 @@ export default function TeamPage() {
 
         <h1 className="text-3xl font-bold mb-3 break-words">{team.name}</h1>
 
-        <div className="mb-8">
+        <div className="mb-8 min-h-8 flex items-center">
           {showCode ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-2xl font-mono font-bold text-yellow-400 tracking-widest">
+                {team.code}
+              </span>
               <button
                 type="button"
                 onClick={handleCopyCode}
-                className="flex items-center gap-3 group"
-                title="Click to copy team code"
+                className="text-sm border border-white/20 hover:border-white/40 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition"
               >
-                <div className="flex gap-1.5">
-                  {team.code.split("").map((digit, i) => (
-                    <span
-                      key={i}
-                      className="w-9 h-11 bg-slate-700 rounded-lg flex items-center justify-center text-xl font-mono font-bold text-yellow-400 shadow-inner border border-white/10"
-                    >
-                      {digit}
-                    </span>
-                  ))}
-                </div>
-                <span className="text-xs text-slate-400 group-hover:text-slate-300 transition">
-                  {copied ? "Copied!" : "Copy"}
-                </span>
+                {copied ? "Copied!" : "Copy"}
               </button>
               <button
                 type="button"
                 onClick={() => setShowCode(false)}
-                className="text-xs text-slate-500 hover:text-slate-400 transition"
+                className="text-sm text-slate-400 hover:text-slate-300 transition underline underline-offset-2 decoration-slate-600"
               >
                 Hide
               </button>

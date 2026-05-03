@@ -3,10 +3,19 @@ export function formatDuration(ms: number): string {
 }
 
 export function formatDateTime(isoString: string): { dateStr: string; timeStr: string } {
-  const date = new Date(isoString)
+  // Ensure the string is parsed as UTC — append Z if no timezone offset is present
+  const normalized = /[Zz]$|[+-]\d{2}:\d{2}$/.test(isoString) ? isoString : isoString + "Z"
+  const d = new Date(normalized)
+  if (isNaN(d.getTime())) return { dateStr: "—", timeStr: "—" }
+  // Use date getters — these always return values in the LOCAL timezone, unlike toLocaleTimeString
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  const h = d.getHours()
+  const h12 = h % 12 || 12
+  const ampm = h < 12 ? "AM" : "PM"
+  const pad = (n: number) => n.toString().padStart(2, "0")
   return {
-    dateStr: date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    timeStr: date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    dateStr: `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
+    timeStr: `${h12}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${ampm}`,
   }
 }
 

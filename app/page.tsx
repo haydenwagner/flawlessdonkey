@@ -34,7 +34,7 @@ export default function HomePage() {
         {user ? (
           <>
             <RecentTimes refreshTrigger={refreshTrigger} />
-            <div className="mt-4 space-y-3">
+            <div className="mt-8 space-y-3">
               <NavCard
                 label="My Dashboard"
                 sublabel="Your personal stats"
@@ -54,7 +54,7 @@ export default function HomePage() {
             </div>
           </>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="mt-8 space-y-3">
             <NavCard
               label="My Dashboard"
               sublabel="Log in to track your stats"

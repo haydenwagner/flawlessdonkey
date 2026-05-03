@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { formatDuration, formatDateTime, getUserAvatarColor } from "@/lib/utils"
 
 export interface TimeEntryRowProps {
@@ -9,30 +10,69 @@ export interface TimeEntryRowProps {
   userId?: string
   displayName?: string | null
   avatarColor?: string
+  isNew?: boolean
 }
 
-export default function TimeEntryRow({ id, created_at, duration_ms, userId, displayName, avatarColor }: TimeEntryRowProps) {
-  const { dateStr, timeStr } = formatDateTime(created_at)
+export default function TimeEntryRow({ created_at, duration_ms, userId, displayName, avatarColor, isNew }: TimeEntryRowProps) {
+  const [{ dateStr, timeStr }, setFormatted] = useState(() => formatDateTime(created_at))
+  const [expanded, setExpanded] = useState(!isNew)
+  const [visible, setVisible] = useState(!isNew)
+  const [highlighted, setHighlighted] = useState(!!isNew)
+
+  useEffect(() => {
+    setFormatted(formatDateTime(created_at))
+  }, [created_at])
+
+  useEffect(() => {
+    if (!isNew) return
+    const t1 = setTimeout(() => { setExpanded(true); setVisible(true) }, 16)
+    const t2 = setTimeout(() => setHighlighted(false), 2000)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [isNew])
+
   const showAvatar = !!userId
   const resolvedColor = avatarColor || (userId ? getUserAvatarColor(userId) : "bg-slate-500")
   const initial = displayName?.trim()?.[0]?.toUpperCase() || "?"
 
   return (
-    <div key={id} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4">
-      {showAvatar && (
-        <div className={`h-9 w-9 rounded-full ${resolvedColor} text-white flex items-center justify-center text-sm font-semibold flex-shrink-0`}>
-          {initial}
+    // Outer grid container: animates height from 0 to auto, pushing items below it down
+    <div
+      style={{
+        display: "grid",
+        gridTemplateRows: expanded ? "1fr" : "0fr",
+        transition: isNew ? "grid-template-rows 0.35s ease" : undefined,
+      }}
+    >
+      <div style={{ overflow: "hidden", minHeight: 0 }}>
+        <div
+          style={{
+            transition: "opacity 0.25s ease, background-color 0.7s ease, border-color 0.7s ease",
+          }}
+          className={[
+            "flex items-center gap-3 rounded-2xl p-4 border",
+            highlighted ? "bg-yellow-400/30 border-yellow-400/50" : "bg-white/5 border-white/10",
+            visible ? "opacity-100" : "opacity-0",
+          ].join(" ")}
+        >
+          {showAvatar && (
+            <div className={`h-9 w-9 rounded-full ${resolvedColor} text-white flex items-center justify-center text-sm font-semibold flex-shrink-0`}>
+              {initial}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            {displayName && (
+              <div className="text-xs font-medium text-slate-300 truncate mb-0.5">{displayName}</div>
+            )}
+            <div className="text-sm text-slate-300">{dateStr}</div>
+            <div className="text-xs text-slate-400">{timeStr}</div>
+          </div>
+          <div
+            style={{ transition: "color 0.7s ease" }}
+            className={`text-lg font-mono font-bold flex-shrink-0 ${highlighted ? "text-white" : "text-yellow-400"}`}
+          >
+            {formatDuration(duration_ms)} s
+          </div>
         </div>
-      )}
-      <div className="flex-1 min-w-0">
-        {displayName && (
-          <div className="text-xs font-medium text-slate-300 truncate mb-0.5">{displayName}</div>
-        )}
-        <div className="text-sm text-slate-300">{dateStr}</div>
-        <div className="text-xs text-slate-400">{timeStr}</div>
-      </div>
-      <div className="text-lg font-mono font-bold text-yellow-400 flex-shrink-0">
-        {formatDuration(duration_ms)} s
       </div>
     </div>
   )

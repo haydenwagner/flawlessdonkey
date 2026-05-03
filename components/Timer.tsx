@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useTimer } from "../hooks/useTimer"
 import { supabase } from "@/lib/supabaseClient"
@@ -12,6 +12,31 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
   const [saving, setSaving] = useState(false)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
+  // When user signs in after hitting the login prompt, save the time they were trying to record
+  useEffect(() => {
+    if (!user) return
+    const pending = sessionStorage.getItem("pendingTime")
+    if (!pending) return
+    const ms = parseInt(pending, 10)
+    sessionStorage.removeItem("pendingTime")
+    if (!ms || ms <= 0) return
+
+    const doSave = async () => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const freshUser = sessionData.session?.user
+      if (!freshUser) return
+      const displayName = freshUser.user_metadata?.display_name || freshUser.user_metadata?.full_name || freshUser.email || null
+      await supabase.from("results").insert({
+        user_id: freshUser.id,
+        duration_ms: ms,
+        team_id: team?.id ?? null,
+        user_display_name: displayName,
+      })
+      onSaveSuccess?.()
+    }
+    doSave()
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleStop = async () => {
     const duration = stop()
     console.log("[Timer] Stop button clicked. Duration:", duration, "ms")
@@ -19,6 +44,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
 
   const handleSave = async () => {
     if (!user) {
+      sessionStorage.setItem("pendingTime", elapsed.toString())
       setShowLoginPrompt(true)
       return
     }
@@ -48,18 +74,19 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
 
   const displaySeconds = (elapsed / 1000).toFixed(1)
   const isPaused = elapsed > 0 && !running
+  const isIdle = elapsed === 0 && !running
 
-  // Left button: invisible when idle, Reset when running, Resume when paused
+  // Left button: hidden when idle, Reset when running, Resume when paused
   const leftLabel = isPaused ? "Resume" : "Reset"
   const leftAction = isPaused
     ? () => { start(); console.log("[Timer] Resume clicked") }
     : () => { reset(); console.log("[Timer] Reset clicked") }
   const leftClassName = [
-    "rounded-xl py-4 text-base font-semibold transition",
+    "overflow-hidden min-w-0 rounded-xl py-4 text-base font-semibold transition-[opacity,background-color,color] duration-200",
     isPaused
       ? "bg-green-600 hover:bg-green-700 text-white"
       : "bg-white/5 border border-white/10 hover:bg-white/10 text-white",
-    elapsed === 0 && !running ? "opacity-0 pointer-events-none" : "opacity-100",
+    isIdle ? "opacity-0 pointer-events-none" : "opacity-100",
   ].join(" ")
 
   // Right button: Start / Stop / Save
@@ -70,7 +97,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
     ? handleSave
     : () => { start(); console.log("[Timer] Start clicked") }
   const rightClassName = [
-    "rounded-xl py-4 text-base font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed",
+    "rounded-xl py-4 text-base font-semibold text-white transition-[background-color] duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
     running
       ? "bg-red-600 hover:bg-red-700"
       : isPaused
@@ -85,10 +112,17 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
           <span className="text-7xl font-mono font-bold tracking-wider text-yellow-400">
             {displaySeconds}
           </span>
-          <span className="text-3xl font-mono font-bold text-yellow-400/60">s</span>
+          <span className="text-3xl font-mono font-bold text-yellow-400">s</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: isIdle ? "0fr 1fr" : "1fr 1fr",
+            columnGap: isIdle ? "0px" : "0.75rem",
+            transition: "grid-template-columns 0.25s ease, column-gap 0.25s ease",
+          }}
+        >
           <button
             type="button"
             onClick={leftAction}

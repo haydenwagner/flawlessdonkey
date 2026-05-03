@@ -23,7 +23,7 @@ export default function UserDashboardPage() {
       <div className="max-w-2xl mx-auto">
         <Nav />
         <h1 className="text-3xl font-bold mb-6 break-words">
-          {user?.user_metadata?.full_name || user?.email?.split("@")[0]}
+          {user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split("@")[0]}
         </h1>
 
         {user && (

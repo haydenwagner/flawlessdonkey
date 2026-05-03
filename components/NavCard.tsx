@@ -15,7 +15,7 @@ export default function NavCard({ label, sublabel, iconBgColor, iconContent, onC
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-[32px] border border-white/10 bg-white/5 p-5 text-left transition hover:bg-white/10"
+      className="w-full rounded-[32px] border border-white/10 bg-white/5 p-5 text-left transition hover:bg-white/10 mb-8"
     >
       <div className="flex items-center gap-4">
         <div className={`h-14 w-14 rounded-3xl ${iconBgColor} flex items-center justify-center text-2xl font-bold text-white flex-shrink-0`}>

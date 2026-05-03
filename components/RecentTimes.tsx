@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import TimeEntryRow from "@/components/TimeEntryRow"
@@ -15,6 +15,9 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
   const { user } = useAuth()
   const [times, setTimes] = useState<TimeResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [newId, setNewId] = useState<string | null>(null)
+  const prevFirstIdRef = useRef<string | null>(null)
+  const hasLoadedRef = useRef(false)
 
   useEffect(() => {
     if (!user) {
@@ -35,7 +38,17 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
           console.error("[RecentTimes] Error fetching results:", error)
           setTimes([])
         } else {
-          setTimes(data || [])
+          const results = data || []
+          setTimes(results)
+
+          const firstId = results[0]?.id ?? null
+          if (hasLoadedRef.current && firstId && firstId !== prevFirstIdRef.current) {
+            setNewId(firstId)
+          } else {
+            setNewId(null)
+          }
+          prevFirstIdRef.current = firstId
+          hasLoadedRef.current = true
         }
       } catch (error) {
         console.error("[RecentTimes] Unexpected error:", error)
@@ -50,7 +63,7 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
 
   if (loading) {
     return (
-      <div className="mt-8">
+      <div className="mt-4">
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Piss</h2>
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -72,11 +85,15 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
   }
 
   return (
-    <div className="mt-8">
+    <div className="mt-4">
       <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Piss</h2>
       <div className="space-y-3">
         {times.map((result) => (
-          <TimeEntryRow key={result.id} {...result} />
+          <TimeEntryRow
+            key={result.id}
+            {...result}
+            isNew={result.id === newId}
+          />
         ))}
       </div>
     </div>
