@@ -12,22 +12,19 @@ import TeamLeaderStats from "@/components/TeamLeaderStats"
 import type { Team } from "@/components/AuthProvider"
 
 export default function TeamPage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const params = useParams()
   const teamId = params.id as string
 
   const [team, setTeam] = useState<Team | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [pageLoading, setPageLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [showCode, setShowCode] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!user) router.push("/login")
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [user, router])
+    if (!authLoading && !user) router.push("/login")
+  }, [user, authLoading, router])
 
   useEffect(() => {
     if (!user || !teamId) return
@@ -45,7 +42,7 @@ export default function TeamPage() {
       }
 
       setTeam(data as Team)
-      setLoading(false)
+      setPageLoading(false)
     }
 
     fetchTeam()
@@ -58,7 +55,7 @@ export default function TeamPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (loading || !team) {
+  if (pageLoading || !team) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8">
         <div className="max-w-2xl mx-auto">

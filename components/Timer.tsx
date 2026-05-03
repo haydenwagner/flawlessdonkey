@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useTimer } from "../hooks/useTimer"
 import { supabase } from "@/lib/supabaseClient"
@@ -11,6 +11,8 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
   const { user, team } = useAuth()
   const [saving, setSaving] = useState(false)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  const teamRef = useRef(team)
+  useEffect(() => { teamRef.current = team }, [team])
 
   // When user signs in after hitting the login prompt, save the time they were trying to record
   useEffect(() => {
@@ -22,24 +24,31 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
     if (!ms || ms <= 0) return
 
     const doSave = async () => {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const freshUser = sessionData.session?.user
-      if (!freshUser) return
-      const displayName = freshUser.user_metadata?.display_name || freshUser.user_metadata?.full_name || freshUser.email || null
-      await supabase.from("results").insert({
-        user_id: freshUser.id,
-        duration_ms: ms,
-        team_id: team?.id ?? null,
-        user_display_name: displayName,
-      })
-      onSaveSuccess?.()
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const freshUser = sessionData.session?.user
+        if (!freshUser) return
+        const displayName = freshUser.user_metadata?.display_name || freshUser.user_metadata?.full_name || freshUser.email || null
+        const { error } = await supabase.from("results").insert({
+          user_id: freshUser.id,
+          duration_ms: ms,
+          team_id: teamRef.current?.id ?? null,
+          user_display_name: displayName,
+        })
+        if (error) {
+          console.error("[Timer] Failed to save pending time:", error)
+          return
+        }
+        onSaveSuccess?.()
+      } catch (err) {
+        console.error("[Timer] Unexpected error saving pending time:", err)
+      }
     }
     doSave()
-  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, onSaveSuccess])
 
-  const handleStop = async () => {
-    const duration = stop()
-    console.log("[Timer] Stop button clicked. Duration:", duration, "ms")
+  const handleStop = () => {
+    stop()
   }
 
   const handleSave = async () => {
@@ -48,20 +57,22 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
       setShowLoginPrompt(true)
       return
     }
-    console.log("[Timer] Save button clicked")
     setSaving(true)
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       const freshUser = sessionData.session?.user
       if (freshUser) {
         const displayName = freshUser.user_metadata?.display_name || freshUser.user_metadata?.full_name || freshUser.email || null
-        const result = await supabase.from("results").insert({
+        const { error } = await supabase.from("results").insert({
           user_id: freshUser.id,
           duration_ms: elapsed,
           team_id: team?.id ?? null,
           user_display_name: displayName,
         })
-        console.log("[Timer] Insert result:", result)
+        if (error) {
+          console.error("[Timer] Failed to save result:", error)
+          return
+        }
         reset()
         onSaveSuccess?.()
       }
@@ -78,9 +89,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
 
   // Left button: hidden when idle, Reset when running, Resume when paused
   const leftLabel = isPaused ? "Resume" : "Reset"
-  const leftAction = isPaused
-    ? () => { start(); console.log("[Timer] Resume clicked") }
-    : () => { reset(); console.log("[Timer] Reset clicked") }
+  const leftAction = isPaused ? start : reset
   const leftClassName = [
     "overflow-hidden min-w-0 rounded-xl py-4 text-base font-semibold transition-[opacity,background-color,color] duration-200",
     isPaused
@@ -95,7 +104,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
     ? handleStop
     : isPaused
     ? handleSave
-    : () => { start(); console.log("[Timer] Start clicked") }
+    : start
   const rightClassName = [
     "rounded-xl py-4 text-base font-semibold text-white transition-[background-color] duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
     running

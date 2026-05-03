@@ -67,14 +67,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [fetchTeam])
 
   useEffect(() => {
-    console.log("[AuthProvider] Initializing auth provider...")
-
     const storedLoggedIn = typeof window !== "undefined" && localStorage.getItem("hasBeenLoggedIn") === "true"
     if (storedLoggedIn) setHasBeenLoggedIn(true)
 
     supabase.auth.getSession().then(({ data }) => {
       const sessionUser = data.session?.user ?? null
-      console.log("[AuthProvider] Initial session check - User:", sessionUser ? `${sessionUser.id} (${sessionUser.email})` : "null")
       setUser(sessionUser)
       if (sessionUser) {
         setHasBeenLoggedIn(true)
@@ -86,7 +83,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       const changedUser = session?.user ?? null
-      console.log("[AuthProvider] Auth state changed - Event:", event, "User:", changedUser ? `${changedUser.id} (${changedUser.email})` : "null")
 
       setUser(changedUser)
 

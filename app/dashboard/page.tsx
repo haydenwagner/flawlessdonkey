@@ -8,15 +8,12 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
 export default function UserDashboardPage() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!user) router.push("/login")
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [user, router])
+    if (!loading && !user) router.push("/login")
+  }, [user, loading, router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8">

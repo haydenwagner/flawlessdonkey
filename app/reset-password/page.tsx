@@ -11,6 +11,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [linkExpired, setLinkExpired] = useState(false)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -18,7 +19,11 @@ export default function ResetPasswordPage() {
         setReady(true)
       }
     })
-    return () => subscription.unsubscribe()
+    const timeout = setTimeout(() => setLinkExpired(true), 5000)
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -65,6 +70,8 @@ export default function ResetPasswordPage() {
               </button>
             </form>
           </>
+        ) : linkExpired ? (
+          <p className="text-red-400 text-center text-sm">Invalid or expired reset link. Please request a new one.</p>
         ) : (
           <p className="text-slate-400 text-center text-sm">Verifying reset link…</p>
         )}
