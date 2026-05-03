@@ -1,14 +1,16 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useTimer } from "../hooks/useTimer"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 
 export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const { running, elapsed, start, stop, reset } = useTimer()
-  const { team } = useAuth()
+  const { user, team } = useAuth()
   const [saving, setSaving] = useState(false)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
   const handleStop = async () => {
     const duration = stop()
@@ -16,15 +18,16 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
   }
 
   const handleSave = async () => {
+    if (!user) {
+      setShowLoginPrompt(true)
+      return
+    }
     console.log("[Timer] Save button clicked")
     setSaving(true)
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       const freshUser = sessionData.session?.user
-      console.log("[Timer] Fresh session user:", freshUser ? `${freshUser.id} (${freshUser.email})` : "null")
-
       if (freshUser) {
-        console.log("[Timer] User logged in. Attempting to save result to DB...")
         const displayName = freshUser.user_metadata?.display_name || freshUser.user_metadata?.full_name || freshUser.email || null
         const result = await supabase.from("results").insert({
           user_id: freshUser.id,
@@ -34,10 +37,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
         })
         console.log("[Timer] Insert result:", result)
         reset()
-        console.log("[Timer] Timer reset after successful save")
         onSaveSuccess?.()
-      } else {
-        console.log("[Timer] User not logged in. Skipping DB save.")
       }
     } catch (error) {
       console.error("[Timer] Error saving result:", error)
@@ -47,42 +47,98 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
   }
 
   const displaySeconds = (elapsed / 1000).toFixed(1)
+  const isPaused = elapsed > 0 && !running
+
+  // Left button: invisible when idle, Reset when running, Resume when paused
+  const leftLabel = isPaused ? "Resume" : "Reset"
+  const leftAction = isPaused
+    ? () => { start(); console.log("[Timer] Resume clicked") }
+    : () => { reset(); console.log("[Timer] Reset clicked") }
+  const leftClassName = [
+    "rounded-xl py-4 text-base font-semibold transition",
+    isPaused
+      ? "bg-green-600 hover:bg-green-700 text-white"
+      : "bg-white/5 border border-white/10 hover:bg-white/10 text-white",
+    elapsed === 0 && !running ? "opacity-0 pointer-events-none" : "opacity-100",
+  ].join(" ")
+
+  // Right button: Start / Stop / Save
+  const rightLabel = running ? "Stop" : isPaused ? (saving ? "Saving..." : "Save") : "Start"
+  const rightAction = running
+    ? handleStop
+    : isPaused
+    ? handleSave
+    : () => { start(); console.log("[Timer] Start clicked") }
+  const rightClassName = [
+    "rounded-xl py-4 text-base font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed",
+    running
+      ? "bg-red-600 hover:bg-red-700"
+      : isPaused
+      ? "bg-violet-600 hover:bg-violet-700"
+      : "bg-green-600 hover:bg-green-700",
+  ].join(" ")
 
   return (
-    <div className="bg-slate-700 rounded-lg p-8 shadow-xl relative pt-22">
-      <button
-        type="button"
-        onClick={() => { reset(); console.log("[Timer] Reset button clicked") }}
-        disabled={saving}
-        className={`absolute top-4 left-4 px-4 flex items-center justify-center text-4xl text-white hover:text-yellow-400 transition ${
-          elapsed > 0 && !saving ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        aria-label="Reset timer"
-      >
-        ↻
-      </button>
+    <>
+      <div className="py-8 text-center">
+        <div className="flex items-baseline justify-center gap-3 mb-10">
+          <span className="text-7xl font-mono font-bold tracking-wider text-yellow-400">
+            {displaySeconds}
+          </span>
+          <span className="text-3xl font-mono font-bold text-yellow-400/60">s</span>
+        </div>
 
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={saving || !(!running && elapsed > 0)}
-        className={`absolute top-4 right-4 px-4 py-2 rounded-lg text-white font-semibold transition ${
-          !running && elapsed > 0 && !saving ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-500 opacity-50 cursor-not-allowed'
-        }`}
-        aria-label="Save result"
-      >
-        {saving ? "Saving..." : "Save"}
-      </button>
-
-      <div className="text-center">
-        <div className="text-6xl font-mono font-bold mb-8 tracking-wider text-yellow-400">{displaySeconds} s</div>
-
-        {!running ? (
-          <button onClick={() => { start(); console.log("[Timer] Start button clicked") }} disabled={saving} className="w-full rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg py-3">Start</button>
-        ) : (
-          <button onClick={handleStop} disabled={saving} className="w-full rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg py-3">Stop</button>
-        )}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={leftAction}
+            disabled={saving}
+            className={leftClassName}
+          >
+            {leftLabel}
+          </button>
+          <button
+            type="button"
+            onClick={rightAction}
+            disabled={saving}
+            className={rightClassName}
+          >
+            {rightLabel}
+          </button>
+        </div>
       </div>
-    </div>
+
+      {showLoginPrompt && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowLoginPrompt(false)}
+        >
+          <div
+            className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm text-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold mb-2">Log in to save</h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Create a free account to track your times and compete with friends.
+            </p>
+            <div className="space-y-3">
+              <Link
+                href="/login"
+                className="block w-full rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold py-3 transition"
+              >
+                Log in
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowLoginPrompt(false)}
+                className="w-full rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold py-3 transition"
+              >
+                Not now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

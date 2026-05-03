@@ -474,8 +474,8 @@ export default function Nav() {
             {initial}
           </button>
         ) : (
-          <Link href="/login" className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium hover:bg-white/10 transition">
-            Login
+          <Link href="/login" className="rounded-full bg-white hover:bg-slate-100 text-slate-900 px-5 py-2 text-sm font-semibold transition">
+            Log in
           </Link>
         )}
       </nav>

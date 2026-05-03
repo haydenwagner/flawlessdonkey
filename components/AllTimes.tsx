@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import TimeEntryRow from "@/components/TimeEntryRow"
@@ -86,7 +87,7 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
     return (
       <div className="space-y-3">
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 bg-slate-600 rounded-lg p-4 animate-pulse">
+          <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4 animate-pulse">
             {isTeamView && <div className="h-9 w-9 rounded-full bg-slate-500 flex-shrink-0"></div>}
             <div className="flex-1">
               <div className="h-4 bg-slate-500 rounded w-24 mb-2"></div>
@@ -100,7 +101,17 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
   }
 
   if (times.length === 0) {
-    return <div className="text-slate-400">No times saved yet.</div>
+    return (
+      <div className="py-10 text-center">
+        <p className="text-slate-400 mb-5">No times recorded yet.</p>
+        <Link
+          href="/"
+          className="inline-block rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2.5 text-sm transition"
+        >
+          Go to Timer
+        </Link>
+      </div>
+    )
   }
 
   return (

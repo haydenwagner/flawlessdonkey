@@ -64,7 +64,7 @@ export default function UserStats({ filter }: { filter: ResultsFilter }) {
     return (
       <div className="grid grid-cols-2 gap-4 mb-8">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-slate-700 rounded-lg p-6 shadow-xl animate-pulse">
+          <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6 animate-pulse">
             <div className="h-4 bg-slate-500 rounded w-20 mb-2"></div>
             <div className="h-8 bg-slate-500 rounded w-16"></div>
           </div>
@@ -79,19 +79,19 @@ export default function UserStats({ filter }: { filter: ResultsFilter }) {
 
   return (
     <div className="grid grid-cols-2 gap-4 mb-8">
-      <div className="bg-slate-700 rounded-lg p-5 shadow-xl">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <div className="text-sm text-slate-400 mb-2">Total Piss</div>
         <div className="text-3xl font-bold text-yellow-400">{stats.totalRuns}</div>
       </div>
-      <div className="bg-slate-700 rounded-lg p-5 shadow-xl">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <div className="text-sm text-slate-400 mb-2">Average Piss</div>
         <div className="text-3xl font-bold text-yellow-400">{formatDuration(stats.averageTime)} s</div>
       </div>
-      <div className="bg-slate-700 rounded-lg p-5 shadow-xl">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <div className="text-sm text-slate-400 mb-2">Worst Piss</div>
         <div className="text-3xl font-bold text-red-400">{formatDuration(stats.shortestTime)} s</div>
       </div>
-      <div className="bg-slate-700 rounded-lg p-5 shadow-xl">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <div className="text-sm text-slate-400 mb-2">Best Piss</div>
         <div className="text-3xl font-bold text-green-400">{formatDuration(stats.longestTime)} s</div>
       </div>

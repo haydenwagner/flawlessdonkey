@@ -31,7 +31,7 @@ export default function HomePage() {
       <div className="max-w-md mx-auto">
         <Nav />
         <Timer onSaveSuccess={handleSaveSuccess} />
-        {user && (
+        {user ? (
           <>
             <RecentTimes refreshTrigger={refreshTrigger} />
             <div className="mt-4 space-y-3">
@@ -53,6 +53,23 @@ export default function HomePage() {
               )}
             </div>
           </>
+        ) : (
+          <div className="mt-4 space-y-3">
+            <NavCard
+              label="My Dashboard"
+              sublabel="Log in to track your stats"
+              iconBgColor="bg-amber-500"
+              iconContent={<DashboardIcon />}
+              onClick={() => router.push("/login")}
+            />
+            <NavCard
+              label="Join a Team"
+              sublabel="Log in to compete with friends"
+              iconBgColor="bg-violet-600"
+              iconContent="+"
+              onClick={() => router.push("/login")}
+            />
+          </div>
         )}
       </div>
     </div>

@@ -18,7 +18,7 @@ export default function TimeEntryRow({ id, created_at, duration_ms, userId, disp
   const initial = displayName?.trim()?.[0]?.toUpperCase() || "?"
 
   return (
-    <div key={id} className="flex items-center gap-3 bg-slate-600 rounded-lg p-4">
+    <div key={id} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4">
       {showAvatar && (
         <div className={`h-9 w-9 rounded-full ${resolvedColor} text-white flex items-center justify-center text-sm font-semibold flex-shrink-0`}>
           {initial}

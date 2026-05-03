@@ -50,16 +50,16 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
 
   if (loading) {
     return (
-      <div className="mt-8 bg-slate-700 rounded-lg p-6 shadow-xl">
-        <h2 className="text-2xl font-semibold mb-4">Recent Piss</h2>
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Piss</h2>
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between bg-slate-600 rounded-lg p-4 animate-pulse">
+            <div key={i} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-4 animate-pulse">
               <div className="flex-1">
-                <div className="h-4 bg-slate-500 rounded w-24 mb-2"></div>
-                <div className="h-3 bg-slate-500 rounded w-32"></div>
+                <div className="h-4 bg-slate-600 rounded w-24 mb-2"></div>
+                <div className="h-3 bg-slate-600 rounded w-32"></div>
               </div>
-              <div className="h-6 bg-slate-500 rounded w-16"></div>
+              <div className="h-6 bg-slate-600 rounded w-16"></div>
             </div>
           ))}
         </div>
@@ -72,8 +72,8 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
   }
 
   return (
-    <div className="mt-8 bg-slate-700 rounded-lg p-6 shadow-xl">
-      <h2 className="text-2xl font-semibold mb-4">Recent Piss</h2>
+    <div className="mt-8">
+      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Piss</h2>
       <div className="space-y-3">
         {times.map((result) => (
           <TimeEntryRow key={result.id} {...result} />
