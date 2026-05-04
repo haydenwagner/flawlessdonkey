@@ -81,8 +81,8 @@ export default function LoginPage() {
         </div>
 
         <h2 className="text-xl font-semibold text-center mb-6">
-          {mode === "sign-in" && "Welcome back"}
-          {mode === "sign-up" && "Create account"}
+          {mode === "sign-in" && "Welcome back, pisser"}
+          {mode === "sign-up" && "Get ready to piss"}
           {mode === "forgot-password" && "Reset password"}
         </h2>
 

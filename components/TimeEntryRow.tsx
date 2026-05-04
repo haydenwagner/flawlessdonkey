@@ -10,10 +10,11 @@ export interface TimeEntryRowProps {
   userId?: string
   displayName?: string | null
   avatarColor?: string
+  avatarUrl?: string | null
   isNew?: boolean
 }
 
-export default function TimeEntryRow({ created_at, duration_ms, userId, displayName, avatarColor, isNew }: TimeEntryRowProps) {
+export default function TimeEntryRow({ created_at, duration_ms, userId, displayName, avatarColor, avatarUrl, isNew }: TimeEntryRowProps) {
   const [{ dateStr, timeStr }, setFormatted] = useState(() => formatDateTime(created_at))
   const [expanded, setExpanded] = useState(!isNew)
   const [visible, setVisible] = useState(!isNew)
@@ -24,7 +25,12 @@ export default function TimeEntryRow({ created_at, duration_ms, userId, displayN
   }, [created_at])
 
   useEffect(() => {
-    if (!isNew) return
+    if (!isNew) {
+      setExpanded(true)
+      setVisible(true)
+      setHighlighted(false)
+      return
+    }
     const t1 = setTimeout(() => { setExpanded(true); setVisible(true) }, 16)
     const t2 = setTimeout(() => setHighlighted(false), 2000)
     return () => { clearTimeout(t1); clearTimeout(t2) }
@@ -55,8 +61,12 @@ export default function TimeEntryRow({ created_at, duration_ms, userId, displayN
           ].join(" ")}
         >
           {showAvatar && (
-            <div className={`h-9 w-9 rounded-full ${resolvedColor} text-white flex items-center justify-center text-sm font-semibold flex-shrink-0`}>
-              {initial}
+            <div className={`h-9 w-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-sm font-semibold ${avatarUrl ? "" : `${resolvedColor} text-white`}`}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={displayName || ""} className="object-cover w-full h-full" />
+              ) : (
+                initial
+              )}
             </div>
           )}
           <div className="flex-1 min-w-0">

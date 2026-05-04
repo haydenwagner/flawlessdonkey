@@ -39,6 +39,13 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
           console.error("[Timer] Failed to save pending time:", error)
           return
         }
+        supabase.from("profiles").upsert({
+          id: freshUser.id,
+          display_name: displayName,
+          avatar_color: freshUser.user_metadata?.avatar_color ?? null,
+          avatar_url: freshUser.user_metadata?.custom_avatar_url ?? null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "id" })
         onSaveSuccess?.()
       } catch (err) {
         console.error("[Timer] Unexpected error saving pending time:", err)
@@ -73,6 +80,13 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
           console.error("[Timer] Failed to save result:", error)
           return
         }
+        supabase.from("profiles").upsert({
+          id: freshUser.id,
+          display_name: displayName,
+          avatar_color: freshUser.user_metadata?.avatar_color ?? null,
+          avatar_url: freshUser.user_metadata?.custom_avatar_url ?? null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "id" })
         reset()
         onSaveSuccess?.()
       }
@@ -162,7 +176,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
           >
             <h3 className="text-xl font-bold mb-2">Log in to save</h3>
             <p className="text-slate-400 text-sm mb-6">
-              Create a free account to track your times and compete with friends.
+              Create a free account to track your piss and piss with friends.
             </p>
             <div className="space-y-3">
               <Link

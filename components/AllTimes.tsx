@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
+import { getProfiles, type CachedProfile } from "@/lib/profileCache"
 import TimeEntryRow from "@/components/TimeEntryRow"
+import GoToTimerCard from "@/components/GoToTimerCard"
 import type { ResultsFilter } from "@/components/UserStats"
 
 interface TimeResult {
@@ -20,6 +21,7 @@ const PAGE_SIZE = 10
 export default function AllTimes({ filter }: { filter: ResultsFilter }) {
   const { user } = useAuth()
   const [times, setTimes] = useState<TimeResult[]>([])
+  const [profileMap, setProfileMap] = useState<Map<string, CachedProfile>>(new Map())
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
@@ -31,6 +33,7 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
 
     setLoading(true)
     setTimes([])
+    setProfileMap(new Map())
     setOffset(0)
 
     const fetchTimes = async () => {
@@ -48,6 +51,10 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
         } else {
           setTimes(data || [])
           setHasMore((data?.length || 0) >= PAGE_SIZE)
+          if (isTeamView && data && data.length > 0) {
+            const ids = [...new Set(data.map((r) => r.user_id).filter(Boolean))] as string[]
+            getProfiles(ids).then(setProfileMap)
+          }
         }
       } catch (error) {
         console.error("[AllTimes] Unexpected error:", error)
@@ -58,7 +65,7 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
     }
 
     fetchTimes()
-  }, [filter.column, filter.value])
+  }, [filter.column, filter.value, isTeamView])
 
   const loadMore = async () => {
     try {
@@ -78,6 +85,17 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
       setTimes((prev) => [...prev, ...(data || [])])
       setOffset(newOffset)
       setHasMore((data?.length || 0) >= PAGE_SIZE)
+
+      if (isTeamView && data && data.length > 0) {
+        const ids = [...new Set(data.map((r) => r.user_id).filter(Boolean))] as string[]
+        getProfiles(ids).then((newProfiles) => {
+          setProfileMap((prev) => {
+            const next = new Map(prev)
+            newProfiles.forEach((p: CachedProfile, id: string) => next.set(id, p))
+            return next
+          })
+        })
+      }
     } catch (error) {
       console.error("[AllTimes] Unexpected error loading more:", error)
     }
@@ -102,36 +120,40 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
 
   if (times.length === 0) {
     return (
-      <div className="py-10 text-center">
-        <p className="text-slate-400 mb-5">No times recorded yet.</p>
-        <Link
-          href="/"
-          className="inline-block rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2.5 text-sm transition"
-        >
-          Go to Timer
-        </Link>
-      </div>
+      <GoToTimerCard
+        label="No times recorded yet"
+        sublabel="Head to the timer to record your first time."
+      />
     )
   }
 
   return (
     <div>
       <div className="space-y-3">
-        {times.map((result) => (
-          <TimeEntryRow
-            key={result.id}
-            id={result.id}
-            created_at={result.created_at}
-            duration_ms={result.duration_ms}
-            userId={result.user_id}
-            displayName={result.user_display_name}
-            avatarColor={
-              result.user_id === user?.id
-                ? user?.user_metadata?.avatar_color
-                : undefined
-            }
-          />
-        ))}
+        {times.map((result) => {
+          const profile = isTeamView ? profileMap.get(result.user_id ?? "") : undefined
+          const isCurrentUser = result.user_id === user?.id
+          return (
+            <TimeEntryRow
+              key={result.id}
+              id={result.id}
+              created_at={result.created_at}
+              duration_ms={result.duration_ms}
+              {...(isTeamView && {
+                userId: result.user_id,
+                displayName: isCurrentUser
+                  ? (user?.user_metadata?.display_name || user?.user_metadata?.full_name || profile?.display_name || result.user_display_name)
+                  : (profile?.display_name ?? result.user_display_name),
+                avatarColor: isCurrentUser
+                  ? (user?.user_metadata?.avatar_color ?? profile?.avatar_color ?? undefined)
+                  : (profile?.avatar_color ?? undefined),
+                avatarUrl: isCurrentUser
+                  ? (user?.user_metadata?.custom_avatar_url ?? profile?.avatar_url ?? undefined)
+                  : (profile?.avatar_url ?? undefined),
+              })}
+            />
+          )
+        })}
       </div>
       {hasMore && (
         <button

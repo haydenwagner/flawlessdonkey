@@ -37,7 +37,7 @@ export default function HomePage() {
             <div className="mt-8 space-y-3">
               <NavCard
                 label="My Dashboard"
-                sublabel="Your personal stats"
+                sublabel="Your personal piss"
                 iconBgColor="bg-amber-500"
                 iconContent={<DashboardIcon />}
                 onClick={() => router.push("/dashboard")}
@@ -57,14 +57,14 @@ export default function HomePage() {
           <div className="mt-8 space-y-3">
             <NavCard
               label="My Dashboard"
-              sublabel="Log in to track your stats"
+              sublabel="Log in to track your piss"
               iconBgColor="bg-amber-500"
               iconContent={<DashboardIcon />}
               onClick={() => router.push("/login")}
             />
             <NavCard
               label="Join a Team"
-              sublabel="Log in to compete with friends"
+              sublabel="Log in to piss with friends"
               iconBgColor="bg-violet-600"
               iconContent="+"
               onClick={() => router.push("/login")}

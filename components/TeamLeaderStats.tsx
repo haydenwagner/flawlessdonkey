@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/components/AuthProvider"
+import { getProfiles, type CachedProfile } from "@/lib/profileCache"
 import { formatDuration, getUserAvatarColor } from "@/lib/utils"
+
+interface LiveUser {
+  id: string
+  avatarUrl?: string | null
+  avatarColor?: string | null
+  displayName?: string | null
+}
 
 interface Entry {
   userId: string
@@ -19,24 +28,41 @@ interface Leaders {
   fewest24h: Entry | null
 }
 
-function LeaderAvatar({ userId, name }: { userId: string; name: string }) {
-  const color = getUserAvatarColor(userId)
+
+function LeaderAvatar({ userId, name, avatarUrl, avatarColor }: { userId: string; name: string; avatarUrl?: string | null; avatarColor?: string | null }) {
+  const color = avatarColor || getUserAvatarColor(userId)
   const initial = name.trim()[0]?.toUpperCase() || "?"
   return (
-    <div className={`h-9 w-9 rounded-full ${color} text-white flex items-center justify-center text-sm font-semibold flex-shrink-0`}>
-      {initial}
+    <div className={`h-9 w-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-sm font-semibold ${avatarUrl ? "" : `${color} text-white`}`}>
+      {avatarUrl ? (
+        <img src={avatarUrl} alt={name} className="object-cover w-full h-full" />
+      ) : (
+        initial
+      )}
     </div>
   )
 }
 
-function LeaderCard({ title, entry, valueClass = "text-yellow-400" }: { title: string; entry: Entry; valueClass?: string }) {
+function LeaderCard({ title, entry, valueClass = "text-yellow-400", profileMap, liveUser }: { title: string; entry: Entry; valueClass?: string; profileMap: Map<string, CachedProfile>; liveUser?: LiveUser }) {
+  const profile = profileMap.get(entry.userId)
+  const isMe = liveUser && entry.userId === liveUser.id
+  const avatarUrl = isMe ? (liveUser.avatarUrl ?? profile?.avatar_url) : profile?.avatar_url
+  const avatarColor = isMe ? (liveUser.avatarColor ?? profile?.avatar_color) : profile?.avatar_color
+  const displayName = isMe
+    ? (liveUser.displayName ?? profile?.display_name ?? entry.name)
+    : (profile?.display_name ?? entry.name)
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
       <div className="text-xs text-slate-400 uppercase tracking-wider mb-3">{title}</div>
       <div className="flex items-center gap-3">
-        <LeaderAvatar userId={entry.userId} name={entry.name} />
+        <LeaderAvatar
+          userId={entry.userId}
+          name={displayName}
+          avatarUrl={avatarUrl}
+          avatarColor={avatarColor}
+        />
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-white truncate">{entry.name}</div>
+          <div className="text-sm font-medium text-white truncate">{displayName}</div>
           {entry.subvalue && <div className="text-xs text-slate-400">{entry.subvalue}</div>}
         </div>
         <div className={`text-lg font-mono font-bold flex-shrink-0 ${valueClass}`}>
@@ -53,7 +79,15 @@ function normalizeTs(ts: string): number {
 }
 
 export default function TeamLeaderStats({ teamId }: { teamId: string }) {
+  const { user } = useAuth()
+  const liveUser: LiveUser | undefined = user ? {
+    id: user.id,
+    avatarUrl: user.user_metadata?.custom_avatar_url ?? null,
+    avatarColor: user.user_metadata?.avatar_color ?? null,
+    displayName: user.user_metadata?.display_name || user.user_metadata?.full_name || null,
+  } : undefined
   const [leaders, setLeaders] = useState<Leaders | null>(null)
+  const [profileMap, setProfileMap] = useState<Map<string, CachedProfile>>(new Map())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -143,6 +177,10 @@ export default function TeamLeaderStats({ teamId }: { teamId: string }) {
         }
       }
 
+      const userIds = Array.from(userMap.keys())
+      const profiles = await getProfiles(userIds)
+      setProfileMap(profiles)
+
       setLeaders({ best, worst, consistent, most24h, fewest24h })
       setLoading(false)
     }
@@ -165,19 +203,19 @@ export default function TeamLeaderStats({ teamId }: { teamId: string }) {
   return (
     <div className="space-y-3 mb-8">
       {leaders.best && (
-        <LeaderCard title="Best Piss" entry={leaders.best} valueClass="text-green-400" />
+        <LeaderCard title="Best Piss" entry={leaders.best} valueClass="text-green-400" profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.worst && (
-        <LeaderCard title="Worst Piss" entry={leaders.worst} valueClass="text-red-400" />
+        <LeaderCard title="Worst Piss" entry={leaders.worst} valueClass="text-red-400" profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.consistent && (
-        <LeaderCard title="Most Consistent Pisser" entry={leaders.consistent} />
+        <LeaderCard title="Most Consistent Pisser" entry={leaders.consistent} profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.most24h && (
-        <LeaderCard title="Most Pisses (24h)" entry={leaders.most24h} />
+        <LeaderCard title="Most Pisses (24h)" entry={leaders.most24h} profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.fewest24h && (
-        <LeaderCard title="Fewest Pisses (24h)" entry={leaders.fewest24h} valueClass="text-red-400" />
+        <LeaderCard title="Fewest Pisses (24h)" entry={leaders.fewest24h} valueClass="text-red-400" profileMap={profileMap} liveUser={liveUser} />
       )}
     </div>
   )

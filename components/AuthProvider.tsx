@@ -8,6 +8,8 @@ export interface Team {
   name: string
   code: string
   created_by: string
+  image_url: string | null
+  description: string | null
 }
 
 interface AuthContextType {
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const { data } = await supabase
         .from("team_members")
-        .select("teams(id, name, code, created_by)")
+        .select("teams(id, name, code, created_by, image_url, description)")
         .eq("user_id", userId)
         .is("left_at", null)
         .maybeSingle()

@@ -3,13 +3,15 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import Image from "next/image"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import { getUserAvatarColor, AVATAR_COLORS } from "@/lib/utils"
+import { uploadImage } from "@/lib/uploadImage"
+import { setCachedProfile } from "@/lib/profileCache"
 import NavCard from "@/components/NavCard"
-import Image from "next/image"
 
-type DrawerView = "main" | "team-setup" | "create-team" | "join-team" | "settings"
+type DrawerView = "main" | "team-setup" | "create-team" | "join-team" | "settings" | "team-settings"
 
 function generateTeamCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -24,8 +26,19 @@ function CogIcon() {
   )
 }
 
+
+function ImagePlaceholderIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  )
+}
+
 export default function Nav() {
-  const { user, hasBeenLoggedIn, team, teamLoading, refreshTeam } = useAuth()
+  const { user, loading: authLoading, hasBeenLoggedIn, team, teamLoading, refreshTeam } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -38,12 +51,25 @@ export default function Nav() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // settings state
+  // user settings state
   const [settingsName, setSettingsName] = useState("")
   const [settingsColor, setSettingsColor] = useState("")
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [leavingTeam, setLeavingTeam] = useState(false)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [clearAvatar, setClearAvatar] = useState(false)
+  const [originalSettingsName, setOriginalSettingsName] = useState("")
+  const [originalSettingsColor, setOriginalSettingsColor] = useState("")
+  const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
+
+  // team settings state
+  const [teamDescription, setTeamDescription] = useState("")
+  const [teamImageFile, setTeamImageFile] = useState<File | null>(null)
+  const [teamImagePreview, setTeamImagePreview] = useState<string | null>(null)
+  const [teamSettingsSaving, setTeamSettingsSaving] = useState(false)
+  const [teamSettingsError, setTeamSettingsError] = useState<string | null>(null)
 
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? "hidden" : ""
@@ -51,6 +77,7 @@ export default function Nav() {
   }, [drawerOpen])
 
   const avatarColor = user?.user_metadata?.avatar_color || (user?.id ? getUserAvatarColor(user.id) : "bg-slate-500")
+  const avatarUrl = (user?.user_metadata?.custom_avatar_url as string | null) ?? null
   const displayName = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email || ""
   const initial = displayName.trim()?.[0]?.toUpperCase() || "?"
 
@@ -63,14 +90,37 @@ export default function Nav() {
     setSubmitting(false)
     setSettingsError(null)
     setLeavingTeam(false)
+    setAvatarFile(null)
+    setAvatarPreview(null)
+    setClearAvatar(false)
+    setTeamImageFile(null)
+    setTeamImagePreview(null)
+    setTeamSettingsError(null)
+    setShowDiscardPrompt(false)
   }
 
   const openSettings = () => {
-    setSettingsName(user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "")
-    setSettingsColor(user?.user_metadata?.avatar_color || (user?.id ? getUserAvatarColor(user.id) : AVATAR_COLORS[0]))
+    const name = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || ""
+    const color = user?.user_metadata?.avatar_color || (user?.id ? getUserAvatarColor(user.id) : AVATAR_COLORS[0])
+    setSettingsName(name)
+    setOriginalSettingsName(name)
+    setSettingsColor(color)
+    setOriginalSettingsColor(color)
+    setAvatarFile(null)
+    setAvatarPreview(avatarUrl)
+    setClearAvatar(false)
     setSettingsError(null)
     setLeavingTeam(false)
+    setShowDiscardPrompt(false)
     setView("settings")
+  }
+
+  const openTeamSettings = () => {
+    setTeamDescription(team?.description || "")
+    setTeamImageFile(null)
+    setTeamImagePreview(team?.image_url || null)
+    setTeamSettingsError(null)
+    setView("team-settings")
   }
 
   const handleLogout = async () => {
@@ -85,9 +135,17 @@ export default function Nav() {
 
   const handleBack = () => {
     switch (view) {
-      case "settings":
       case "team-setup":
         setView("main")
+        break
+      case "settings": {
+        const hasChanges = settingsName !== originalSettingsName || settingsColor !== originalSettingsColor || avatarFile !== null || (clearAvatar && avatarUrl !== null)
+        if (hasChanges) { setShowDiscardPrompt(true); return }
+        setView("main")
+        break
+      }
+      case "team-settings":
+        setView("settings")
         break
       case "create-team":
         setView("team-setup")
@@ -180,16 +238,87 @@ export default function Nav() {
     setSettingsSaving(true)
     setSettingsError(null)
 
-    const { error } = await supabase.auth.updateUser({
-      data: { display_name: settingsName.trim(), avatar_color: settingsColor },
-    })
+    try {
+      let newAvatarUrl: string | null = avatarUrl
 
-    if (error) {
-      setSettingsError("Failed to save settings. Please try again.")
-    } else {
-      setView("main")
+      if (clearAvatar) {
+        newAvatarUrl = null
+      } else if (avatarFile && user) {
+        const uploaded = await uploadImage("avatars", user.id, avatarFile)
+        if (!uploaded) {
+          setSettingsError("Failed to upload avatar. Please try again.")
+          return
+        }
+        newAvatarUrl = uploaded
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          display_name: settingsName.trim(),
+          avatar_color: settingsColor,
+          custom_avatar_url: newAvatarUrl,
+        },
+      })
+
+      if (error) {
+        setSettingsError("Failed to save settings. Please try again.")
+      } else {
+        const profileData = {
+          display_name: settingsName.trim(),
+          avatar_color: settingsColor,
+          avatar_url: newAvatarUrl,
+        }
+        const { error: profileError } = await supabase.from("profiles").upsert({
+          id: user!.id,
+          ...profileData,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "id" })
+        if (profileError) console.error("[Nav] Profile upsert failed:", profileError)
+        setCachedProfile(user!.id, profileData)
+        setAvatarFile(null)
+        setView("main")
+      }
+    } finally {
+      setSettingsSaving(false)
     }
-    setSettingsSaving(false)
+  }
+
+  const handleSaveTeamSettings = async () => {
+    if (!team || !user) return
+    setTeamSettingsSaving(true)
+    setTeamSettingsError(null)
+
+    try {
+      let imageUrl = team.image_url
+
+      if (teamImageFile) {
+        const uploaded = await uploadImage("team-images", team.id, teamImageFile)
+        if (!uploaded) {
+          setTeamSettingsError("Failed to upload image. Please try again.")
+          return
+        }
+        imageUrl = uploaded
+      }
+
+      const { error } = await supabase
+        .from("teams")
+        .update({
+          image_url: imageUrl,
+          description: teamDescription.trim() || null,
+        })
+        .eq("id", team.id)
+
+      if (error) {
+        setTeamSettingsError("Failed to save team settings. Please try again.")
+        return
+      }
+
+      await refreshTeam()
+      setTeamImageFile(null)
+      setView("settings")
+    } finally {
+      setTeamSettingsSaving(false)
+    }
   }
 
   const handleLeaveTeam = async () => {
@@ -222,14 +351,18 @@ export default function Nav() {
         return (
           <div className="flex-1">
             <div className="mt-8 flex flex-col items-center gap-4">
-              <div className={`h-28 w-28 rounded-full ${avatarColor} text-white flex items-center justify-center text-6xl font-bold shadow-lg`}>
-                {initial}
-              </div>
+              {avatarUrl ? (
+                <div className="h-28 w-28 rounded-full overflow-hidden shadow-lg">
+                  <img src={avatarUrl} alt="Avatar" className="object-cover w-full h-full" />
+                </div>
+              ) : (
+                <div className={`h-28 w-28 rounded-full ${avatarColor} text-white flex items-center justify-center text-6xl font-bold shadow-lg`}>
+                  {initial}
+                </div>
+              )}
               <div className="text-base font-semibold text-white text-center">{displayName}</div>
-              <div className="text-sm text-slate-400 text-center px-4">{user?.email}</div>
             </div>
 
-            {/* Full-width stacked nav cards */}
             <div className="mt-8 space-y-3">
               <NavCard
                 label="Timer"
@@ -266,8 +399,9 @@ export default function Nav() {
               ) : team ? (
                 <NavCard
                   label={team.name}
-                  sublabel="My Team"
+                  sublabel={team.description || "My team"}
                   iconBgColor="bg-violet-600"
+                  iconImageUrl={team.image_url}
                   iconContent={team.name[0].toUpperCase()}
                   onClick={() => handleNavClick(`/team/${team.id}`)}
                 />
@@ -281,25 +415,6 @@ export default function Nav() {
                 />
               )}
             </div>
-
-            {/* Half-width grid layout (kept for reference — nice left-bar style)
-            <div className="mt-12 grid grid-cols-2 gap-4">
-              <button type="button" onClick={() => handleNavClick("/")} className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative">
-                <div className="absolute top-0 bottom-0 left-0 w-10 bg-green-600 rounded-l-[32px]"></div>
-                <div className="relative px-2 py-3 flex items-center gap-4">
-                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white flex-shrink-0 z-10 relative" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>
-                  <div className="text-base font-semibold text-slate-100">Timer</div>
-                </div>
-              </button>
-              <button type="button" onClick={() => handleNavClick("/dashboard")} className="rounded-[32px] border border-white/10 bg-white/5 overflow-hidden text-left transition hover:bg-white/10 relative">
-                <div className="absolute top-0 bottom-0 left-0 w-10 bg-amber-500 rounded-l-[32px]"></div>
-                <div className="relative px-2 py-3 flex items-center gap-4">
-                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white flex-shrink-0 z-10 relative" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18" /><polyline points="17,6 23,6 23,12" /></svg>
-                  <div className="text-base font-semibold text-slate-100">Dashboard</div>
-                </div>
-              </button>
-            </div>
-            */}
           </div>
         )
 
@@ -368,7 +483,8 @@ export default function Nav() {
       case "settings":
         return (
           <div className="flex-1">
-            <h2 className="text-xl font-bold mt-6 mb-6">Settings</h2>
+            <h2 className="text-xl font-bold mt-6 mb-1">Settings</h2>
+            <p className="text-sm text-slate-500 mb-6">{user?.email}</p>
 
             <div className="space-y-6">
               <div>
@@ -383,18 +499,50 @@ export default function Nav() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-3">Avatar color</label>
-                <div className="flex flex-wrap gap-3">
-                  {AVATAR_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setSettingsColor(color)}
-                      className={`h-10 w-10 rounded-full ${color} transition ${
-                        settingsColor === color ? "ring-2 ring-white ring-offset-2 ring-offset-slate-900" : "opacity-70 hover:opacity-100"
-                      }`}
-                    />
-                  ))}
+                <label className="text-sm text-slate-400 block mb-3">Avatar</label>
+                <div className="flex items-center gap-4">
+                  <div className={`h-14 w-14 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xl font-bold text-white ${!avatarPreview ? settingsColor : ""}`}>
+                    {avatarPreview ? (
+                      <img src={avatarPreview} alt="Avatar preview" className="object-cover w-full h-full" />
+                    ) : (
+                      initial
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {AVATAR_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => {
+                          setSettingsColor(color)
+                          setAvatarFile(null)
+                          setAvatarPreview(null)
+                          setClearAvatar(true)
+                        }}
+                        className={`h-8 w-8 rounded-full ${color} transition ${
+                          settingsColor === color && !avatarPreview ? "ring-2 ring-white ring-offset-1 ring-offset-slate-900" : "opacity-70 hover:opacity-100"
+                        }`}
+                      />
+                    ))}
+                    <label className="h-8 w-8 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 flex items-center justify-center cursor-pointer transition">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 text-white/70" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          setAvatarFile(file)
+                          setAvatarPreview(URL.createObjectURL(file))
+                          setClearAvatar(false)
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -412,6 +560,17 @@ export default function Nav() {
 
             <div className="mt-6 border-t border-white/10 pt-6">
               <div className="space-y-4">
+                {team && team.created_by === user?.id && (
+                  <button
+                    type="button"
+                    onClick={openTeamSettings}
+                    className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-semibold text-slate-300 hover:bg-white/5 transition flex items-center justify-between"
+                  >
+                    <span>Team settings</span>
+                    <span className="text-slate-500">›</span>
+                  </button>
+                )}
+
                 <button type="button" onClick={handleLogout} className="w-full rounded-xl bg-red-600 px-4 py-3 text-base font-semibold text-white hover:bg-red-700 transition">
                   Logout
                 </button>
@@ -454,6 +613,68 @@ export default function Nav() {
             </div>
           </div>
         )
+
+      case "team-settings":
+        return (
+          <div className="flex-1">
+            <h2 className="text-xl font-bold mt-6 mb-6">Team settings</h2>
+
+            <div className="space-y-6">
+              <div>
+                <label className="text-sm text-slate-400 block mb-2">Team image</label>
+                <div className="relative rounded-xl overflow-hidden bg-white/5 border border-white/10 aspect-video flex items-center justify-center group cursor-pointer">
+                  {teamImagePreview ? (
+                    <img src={teamImagePreview} alt="Team image preview" className="absolute inset-0 object-cover w-full h-full" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <ImagePlaceholderIcon />
+                      <span className="text-sm text-slate-500">Upload an image</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                    <span className="text-white text-sm font-medium">Change image</span>
+                  </div>
+                  <label className="absolute inset-0 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setTeamImageFile(file)
+                        setTeamImagePreview(URL.createObjectURL(file))
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-400 block mb-2">Description</label>
+                <input
+                  type="text"
+                  value={teamDescription}
+                  onChange={(e) => setTeamDescription(e.target.value)}
+                  maxLength={80}
+                  placeholder="Add a team tagline..."
+                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition"
+                />
+              </div>
+
+              {teamSettingsError && <p className="text-red-400 text-sm">{teamSettingsError}</p>}
+
+              <button
+                type="button"
+                onClick={handleSaveTeamSettings}
+                disabled={teamSettingsSaving}
+                className="w-full rounded-xl bg-violet-600 px-4 py-3 text-base font-semibold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {teamSettingsSaving ? "Saving..." : "Save team settings"}
+              </button>
+            </div>
+          </div>
+        )
     }
   }
 
@@ -464,21 +685,65 @@ export default function Nav() {
           <Image src="/logo.png" alt="Site Logo" width={100} height={40} priority />
         </button>
 
-        {(user || hasBeenLoggedIn) ? (
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className={`h-12 w-12 rounded-full ${avatarColor} text-white flex items-center justify-center text-lg font-semibold shadow-lg transition hover:opacity-90`}
-            aria-label="Open account drawer"
-          >
-            {initial}
-          </button>
-        ) : (
-          <Link href="/login" className="rounded-full bg-white hover:bg-slate-100 text-slate-900 px-5 py-2 text-sm font-semibold transition">
-            Log in
-          </Link>
-        )}
+        <div style={{ opacity: authLoading ? 0 : 1, transition: "opacity 0.15s ease" }}>
+          {(user || hasBeenLoggedIn) ? (
+            avatarUrl ? (
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                className="h-12 w-12 rounded-full overflow-hidden shadow-lg transition hover:opacity-90"
+                aria-label="Open account drawer"
+              >
+                <img src={avatarUrl} alt="Avatar" className="object-cover w-full h-full" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                className={`h-12 w-12 rounded-full ${avatarColor} text-white flex items-center justify-center text-lg font-semibold shadow-lg transition hover:opacity-90`}
+                aria-label="Open account drawer"
+              >
+                {initial}
+              </button>
+            )
+          ) : (
+            <Link href="/login" className="rounded-full bg-white hover:bg-slate-100 text-slate-900 px-5 py-2 text-sm font-semibold transition">
+              Log in
+            </Link>
+          )}
+        </div>
       </nav>
+
+      {showDiscardPrompt && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowDiscardPrompt(false)}
+        >
+          <div
+            className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold mb-2">Discard changes?</h3>
+            <p className="text-slate-400 text-sm mb-6">Your unsaved changes will be lost.</p>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => { setShowDiscardPrompt(false); setView("main") }}
+                className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold py-3 transition"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDiscardPrompt(false)}
+                className="w-full rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold py-3 transition"
+              >
+                Keep editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {drawerOpen && (
         <div className="fixed inset-0 z-40 flex">
