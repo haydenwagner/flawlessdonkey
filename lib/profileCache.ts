@@ -12,10 +12,12 @@ export async function getProfiles(userIds: string[]): Promise<Map<string, Cached
   const missing = userIds.filter((id) => !cache.has(id))
 
   if (missing.length > 0) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("id, display_name, avatar_color, avatar_url")
       .in("id", missing)
+
+    if (error) console.error("[profileCache] Failed to fetch profiles:", error)
 
     data?.forEach(({ id, display_name, avatar_color, avatar_url }) => {
       cache.set(id, { display_name, avatar_color, avatar_url })
