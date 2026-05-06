@@ -18,6 +18,7 @@ interface Entry {
   name: string
   value: string
   subvalue?: string
+  durationMs?: number
 }
 
 interface Leaders {
@@ -51,8 +52,17 @@ function LeaderCard({ title, entry, valueClass = "text-yellow-400", profileMap, 
   const displayName = isMe
     ? (liveUser.displayName ?? profile?.display_name ?? entry.name)
     : (profile?.display_name ?? entry.name)
+  const isDarkPurple = entry.durationMs !== undefined && entry.durationMs / 1000 >= 60
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+    <div
+      className="bg-white/5 border border-white/10 rounded-2xl p-4"
+      style={isDarkPurple ? {
+        backgroundImage: "linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.75))",
+        backgroundPosition: "right 0",
+        backgroundSize: "80px 100%",
+        backgroundRepeat: "no-repeat",
+      } : undefined}
+    >
       <div className="text-xs text-slate-400 uppercase tracking-wider mb-3">{title}</div>
       <div className="flex items-center gap-3">
         <LeaderAvatar
@@ -133,11 +143,11 @@ export default function TeamLeaderStats({ teamId }: { teamId: string }) {
         const min = Math.min(...durations)
         if (max > bestDur) {
           bestDur = max
-          best = { userId, name, value: `${formatDuration(max)}s` }
+          best = { userId, name, value: `${formatDuration(max)}`, durationMs: max }
         }
         if (min < worstDur) {
           worstDur = min
-          worst = { userId, name, value: `${formatDuration(min)}s` }
+          worst = { userId, name, value: `${formatDuration(min)}`, durationMs: min }
         }
       }
 
@@ -155,8 +165,8 @@ export default function TeamLeaderStats({ teamId }: { teamId: string }) {
           consistent = {
             userId,
             name,
-            value: `±${formatDuration(stdDev)}s`,
-            subvalue: `avg ${formatDuration(mean)}s`,
+            value: `±${formatDuration(stdDev)}`,
+            subvalue: `avg ${formatDuration(mean)}`,
           }
         }
       }

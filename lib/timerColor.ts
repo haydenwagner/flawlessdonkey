@@ -31,13 +31,15 @@ export function getAnimLightness(seconds: number): number {
   // t=1  → 38  (deep dark purple, ~80s)
 }
 
-// Static color for stored time entries and stats — darkens monotonically blue→purple over 40–80s.
-// Avoids the "lighter = longer" confusion that an arc would create in a list.
+// Discrete color brackets for time entry rows and stats.
+// All pre-60s values are bright enough to read on the dark card background.
+// 60s+ uses a fixed dark purple; the card's white gradient provides contrast.
 export function getTimerColor(seconds: number): string {
-  const hue = getTimerHue(seconds)
-  if (seconds <= 40) return `hsl(${hue}, 85%, 58%)`
-  const t = Math.min((seconds - 40) / 40, 1)
-  const saturation = 85 + t * 8   // 85% → 93%
-  const lightness = 58 - t * 20   // 58% → 38%
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+  if (seconds < 5)  return "hsl(4,   86%, 65%)"  // red
+  if (seconds < 10) return "hsl(25,  90%, 62%)"  // orange
+  if (seconds < 20) return "hsl(48,  90%, 60%)"  // yellow
+  if (seconds < 25) return "hsl(142, 62%, 58%)"  // green
+  if (seconds < 40) return "hsl(213, 85%, 65%)"  // light blue
+  if (seconds < 60) return "hsl(262, 70%, 70%)"  // light purple
+  return                     "hsl(270, 90%, 40%)" // dark purple (60s+)
 }

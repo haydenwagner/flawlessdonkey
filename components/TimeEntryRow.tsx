@@ -41,6 +41,8 @@ export default function TimeEntryRow({ created_at, duration_ms, userId, displayN
   const resolvedColor = avatarColor || (userId ? getUserAvatarColor(userId) : "bg-slate-500")
   const initial = displayName?.trim()?.[0]?.toUpperCase() || "?"
 
+  const isDarkPurple = duration_ms / 1000 >= 60
+
   return (
     // Outer grid container: animates height from 0 to auto, pushing items below it down
     <div
@@ -54,6 +56,10 @@ export default function TimeEntryRow({ created_at, duration_ms, userId, displayN
         <div
           style={{
             transition: "opacity 0.25s ease, background-color 0.7s ease, border-color 0.7s ease",
+            backgroundImage: (!highlighted && isDarkPurple) ? "linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.75))" : undefined,
+            backgroundPosition: (!highlighted && isDarkPurple) ? "right 0" : undefined,
+            backgroundSize: (!highlighted && isDarkPurple) ? "80px 100%" : undefined,
+            backgroundRepeat: (!highlighted && isDarkPurple) ? "no-repeat" : undefined,
           }}
           className={[
             "flex items-center gap-3 rounded-2xl p-4 border",
@@ -84,7 +90,7 @@ export default function TimeEntryRow({ created_at, duration_ms, userId, displayN
             }}
             className="text-lg font-mono font-bold flex-shrink-0"
           >
-            {formatDuration(duration_ms)} s
+            {formatDuration(duration_ms)}
           </div>
         </div>
       </div>

@@ -86,19 +86,19 @@ export default function UserStats({ filter, omitMinMax }: { filter: ResultsFilte
         <div className="text-sm text-slate-400 mb-2">Total Piss</div>
         <div className="text-3xl font-bold text-yellow-400">{stats.totalRuns}</div>
       </div>
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <div className="text-sm text-slate-400 mb-2">Average Piss</div>
-        <div className="text-3xl font-bold" style={{ color: getTimerColor(stats.averageTime / 1000) }}>{formatDuration(stats.averageTime)} s</div>
+      <div className={`rounded-2xl p-5 border ${stats.averageTime / 1000 >= 60 ? "bg-white border-slate-200" : "bg-white/5 border-white/10"}`}>
+        <div className={`text-sm mb-2 ${stats.averageTime / 1000 >= 60 ? "text-slate-700" : "text-slate-400"}`}>Average Piss</div>
+        <div className="text-3xl font-bold" style={{ color: getTimerColor(stats.averageTime / 1000) }}>{formatDuration(stats.averageTime)}</div>
       </div>
       {!omitMinMax && (
         <>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-            <div className="text-sm text-slate-400 mb-2">Worst Piss</div>
-            <div className="text-3xl font-bold text-red-400">{formatDuration(stats.shortestTime)} s</div>
+          <div className={`rounded-2xl p-5 border ${stats.shortestTime / 1000 >= 60 ? "bg-white border-slate-200" : "bg-white/5 border-white/10"}`}>
+            <div className={`text-sm mb-2 ${stats.shortestTime / 1000 >= 60 ? "text-slate-700" : "text-slate-400"}`}>Worst Piss</div>
+            <div className="text-3xl font-bold text-red-400">{formatDuration(stats.shortestTime)}</div>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-            <div className="text-sm text-slate-400 mb-2">Best Piss</div>
-            <div className="text-3xl font-bold text-green-400">{formatDuration(stats.longestTime)} s</div>
+          <div className={`rounded-2xl p-5 border ${stats.longestTime / 1000 >= 60 ? "bg-white border-slate-200" : "bg-white/5 border-white/10"}`}>
+            <div className={`text-sm mb-2 ${stats.longestTime / 1000 >= 60 ? "text-slate-700" : "text-slate-400"}`}>Best Piss</div>
+            <div className="text-3xl font-bold text-green-400">{formatDuration(stats.longestTime)}</div>
           </div>
         </>
       )}
