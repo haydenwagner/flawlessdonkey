@@ -56,17 +56,22 @@ export default function Nav() {
   const [settingsColor, setSettingsColor] = useState("")
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
-  const [leavingTeam, setLeavingTeam] = useState(false)
+  const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [clearAvatar, setClearAvatar] = useState(false)
   const [originalSettingsName, setOriginalSettingsName] = useState("")
   const [originalSettingsColor, setOriginalSettingsColor] = useState("")
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
+  const [discardTarget, setDiscardTarget] = useState<"main" | "settings" | "close">("main")
+  const [teamSettingsOrigin, setTeamSettingsOrigin] = useState<"settings" | "team-page">("settings")
   const [pendingOpenTeamSettings, setPendingOpenTeamSettings] = useState(false)
 
   // team settings state
+  const [teamSettingsName, setTeamSettingsName] = useState("")
+  const [originalTeamSettingsName, setOriginalTeamSettingsName] = useState("")
   const [teamDescription, setTeamDescription] = useState("")
+  const [originalTeamDescription, setOriginalTeamDescription] = useState("")
   const [teamImageFile, setTeamImageFile] = useState<File | null>(null)
   const [teamImagePreview, setTeamImagePreview] = useState<string | null>(null)
   const [teamSettingsSaving, setTeamSettingsSaving] = useState(false)
@@ -86,6 +91,7 @@ export default function Nav() {
   useEffect(() => {
     if (!pendingOpenTeamSettings) return
     setPendingOpenTeamSettings(false)
+    setTeamSettingsOrigin("team-page")
     setDrawerOpen(true)
     openTeamSettings()
   }, [pendingOpenTeamSettings, team])
@@ -103,7 +109,7 @@ export default function Nav() {
     setError(null)
     setSubmitting(false)
     setSettingsError(null)
-    setLeavingTeam(false)
+    setShowLeaveTeamModal(false)
     setAvatarFile(null)
     setAvatarPreview(null)
     setClearAvatar(false)
@@ -124,13 +130,15 @@ export default function Nav() {
     setAvatarPreview(avatarUrl)
     setClearAvatar(false)
     setSettingsError(null)
-    setLeavingTeam(false)
     setShowDiscardPrompt(false)
     setView("settings")
   }
 
   const openTeamSettings = () => {
+    setTeamSettingsName(team?.name || "")
+    setOriginalTeamSettingsName(team?.name || "")
     setTeamDescription(team?.description || "")
+    setOriginalTeamDescription(team?.description || "")
     setTeamImageFile(null)
     setTeamImagePreview(team?.image_url || null)
     setTeamSettingsError(null)
@@ -154,16 +162,24 @@ export default function Nav() {
         break
       case "settings": {
         const hasChanges = settingsName !== originalSettingsName || settingsColor !== originalSettingsColor || avatarFile !== null || (clearAvatar && avatarUrl !== null)
-        if (hasChanges) { setShowDiscardPrompt(true); return }
+        if (hasChanges) { setDiscardTarget("main"); setShowDiscardPrompt(true); return }
         setView("main")
         break
       }
-      case "team-settings":
-        openSettings()
+      case "team-settings": {
+        const hasTeamChanges = teamImageFile !== null || teamSettingsName.trim() !== originalTeamSettingsName.trim() || teamDescription.trim() !== originalTeamDescription.trim()
+        const teamDiscardTarget = teamSettingsOrigin === "team-page" ? "close" : "settings"
+        if (hasTeamChanges) { setDiscardTarget(teamDiscardTarget); setShowDiscardPrompt(true); return }
+        if (teamSettingsOrigin === "team-page") closeDrawer()
+        else openSettings()
         break
+      }
       case "create-team":
         setView("team-setup")
         setTeamName("")
+        setTeamDescription("")
+        setTeamImageFile(null)
+        setTeamImagePreview(null)
         setError(null)
         break
       case "join-team":
@@ -203,6 +219,17 @@ export default function Nav() {
         setError("Team created but could not add you as a member. Please try again.")
         setSubmitting(false)
         return
+      }
+
+      if (teamImageFile || teamDescription.trim()) {
+        let imageUrl: string | null = null
+        if (teamImageFile) {
+          imageUrl = await uploadImage("team-images", newTeam.id, teamImageFile)
+        }
+        await supabase.from("teams").update({
+          image_url: imageUrl,
+          description: teamDescription.trim() || null,
+        }).eq("id", newTeam.id)
       }
 
       await refreshTeam()
@@ -317,6 +344,7 @@ export default function Nav() {
       const { error } = await supabase
         .from("teams")
         .update({
+          name: teamSettingsName.trim(),
           image_url: imageUrl,
           description: teamDescription.trim() || null,
         })
@@ -349,12 +377,12 @@ export default function Nav() {
     if (error) {
       setSettingsError("Failed to leave team. Please try again.")
       setSubmitting(false)
-      setLeavingTeam(false)
+      setShowLeaveTeamModal(false)
       return
     }
 
     await refreshTeam()
-    setLeavingTeam(false)
+    setShowLeaveTeamModal(false)
     setSubmitting(false)
     setView("main")
   }
@@ -447,7 +475,7 @@ export default function Nav() {
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
                   </svg>
                 }
-                onClick={() => setView("create-team")}
+                onClick={() => { setTeamDescription(""); setTeamImageFile(null); setTeamImagePreview(null); setView("create-team") }}
               />
               <NavCard
                 label="Join a Team"
@@ -471,6 +499,37 @@ export default function Nav() {
             <p className="text-sm text-slate-400 mb-8">Give your team a name. A 6-digit code will be generated for others to join.</p>
             <div className="space-y-4">
               <input type="text" placeholder="Team name" value={teamName} onChange={(e) => setTeamName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCreateTeam()} maxLength={50} className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition" />
+
+              <div>
+                <label className="text-sm text-slate-400 block mb-2">Team image <span className="text-slate-600">— optional</span></label>
+                <div className="relative rounded-xl overflow-hidden bg-white/5 border border-white/10 aspect-video flex items-center justify-center group cursor-pointer">
+                  {teamImagePreview ? (
+                    <img src={teamImagePreview} alt="Team image preview" className="absolute inset-0 object-cover w-full h-full" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <ImagePlaceholderIcon />
+                      <span className="text-sm text-slate-500">Upload an image</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                    <span className="text-white text-sm font-medium">{teamImagePreview ? "Change image" : "Upload image"}</span>
+                  </div>
+                  <label className="absolute inset-0 cursor-pointer">
+                    <input type="file" accept="image/*" className="sr-only" onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      setTeamImageFile(file)
+                      setTeamImagePreview(URL.createObjectURL(file))
+                    }} />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-400 block mb-2">Description <span className="text-slate-600">— optional</span></label>
+                <input type="text" value={teamDescription} onChange={(e) => setTeamDescription(e.target.value)} maxLength={80} placeholder="Add a team tagline..." className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition" />
+              </div>
+
               {error && <p className="text-red-400 text-sm">{error}</p>}
               <button type="button" onClick={handleCreateTeam} disabled={!teamName.trim() || submitting} className="w-full rounded-xl bg-violet-600 px-4 py-3 text-base font-semibold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
                 {submitting ? "Creating..." : "Create Team"}
@@ -572,58 +631,32 @@ export default function Nav() {
               </button>
             </div>
 
-            <div className="mt-6 border-t border-white/10 pt-6">
-              <div className="space-y-4">
-                {team && team.created_by === user?.id && (
-                  <button
-                    type="button"
-                    onClick={openTeamSettings}
-                    className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-semibold text-slate-300 hover:bg-white/5 transition flex items-center justify-between"
-                  >
-                    <span>Team settings</span>
-                    <span className="text-slate-500">›</span>
-                  </button>
-                )}
-
-                <button type="button" onClick={handleLogout} className="w-full rounded-xl bg-red-600 px-4 py-3 text-base font-semibold text-white hover:bg-red-700 transition">
-                  Logout
+            <div className="mt-6 border-t border-white/10 pt-6 space-y-4">
+              {team && team.created_by === user?.id && (
+                <button
+                  type="button"
+                  onClick={() => { setTeamSettingsOrigin("settings"); openTeamSettings() }}
+                  className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-semibold text-slate-300 hover:bg-white/5 transition flex items-center justify-between"
+                >
+                  <span>Team settings</span>
+                  <span className="text-slate-500">›</span>
                 </button>
+              )}
+              {team && (
+                <button
+                  type="button"
+                  onClick={() => setShowLeaveTeamModal(true)}
+                  className="w-full rounded-xl border border-red-500/40 px-4 py-3 text-base font-semibold text-red-400 hover:bg-red-500/10 transition"
+                >
+                  Leave {team.name}
+                </button>
+              )}
+            </div>
 
-                {team && (
-                  <div className="border-t border-white/10 pt-4">
-                    {leavingTeam ? (
-                      <div>
-                        <p className="text-sm text-slate-300 mb-3">Leave <span className="font-semibold text-white">{team.name}</span>? Your past entries will stay on the team, but new ones won't.</p>
-                        <div className="flex gap-3">
-                          <button
-                            type="button"
-                            onClick={handleLeaveTeam}
-                            disabled={submitting}
-                            className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-base font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition"
-                          >
-                            {submitting ? "Leaving..." : "Yes, leave"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setLeavingTeam(false)}
-                            className="flex-1 rounded-xl bg-slate-700 px-4 py-3 text-base font-semibold text-white hover:bg-slate-600 transition"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setLeavingTeam(true)}
-                        className="w-full rounded-xl border border-red-500/40 px-4 py-3 text-base font-semibold text-red-400 hover:bg-red-500/10 transition"
-                      >
-                        Leave {team.name}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <button type="button" onClick={handleLogout} className="w-full rounded-xl bg-red-600 px-4 py-3 text-base font-semibold text-white hover:bg-red-700 transition">
+                Logout
+              </button>
             </div>
           </div>
         )
@@ -634,6 +667,17 @@ export default function Nav() {
             <h2 className="text-xl font-bold mt-6 mb-6">Team settings</h2>
 
             <div className="space-y-6">
+              <div>
+                <label className="text-sm text-slate-400 block mb-2">Team name</label>
+                <input
+                  type="text"
+                  value={teamSettingsName}
+                  onChange={(e) => setTeamSettingsName(e.target.value)}
+                  maxLength={50}
+                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition"
+                />
+              </div>
+
               <div>
                 <label className="text-sm text-slate-400 block mb-2">Team image</label>
                 <div className="relative rounded-xl overflow-hidden bg-white/5 border border-white/10 aspect-video flex items-center justify-center group cursor-pointer">
@@ -681,7 +725,7 @@ export default function Nav() {
               <button
                 type="button"
                 onClick={handleSaveTeamSettings}
-                disabled={teamSettingsSaving}
+                disabled={!teamSettingsName.trim() || teamSettingsSaving}
                 className="w-full rounded-xl bg-violet-600 px-4 py-3 text-base font-semibold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 {teamSettingsSaving ? "Saving..." : "Save team settings"}
@@ -742,7 +786,12 @@ export default function Nav() {
             <div className="space-y-3">
               <button
                 type="button"
-                onClick={() => { setShowDiscardPrompt(false); setView("main") }}
+                onClick={() => {
+                  setShowDiscardPrompt(false)
+                  if (discardTarget === "settings") openSettings()
+                  else if (discardTarget === "close") closeDrawer()
+                  else setView("main")
+                }}
                 className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold py-3 transition"
               >
                 Discard
@@ -753,6 +802,38 @@ export default function Nav() {
                 className="w-full rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold py-3 transition"
               >
                 Keep editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveTeamModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowLeaveTeamModal(false)}
+        >
+          <div
+            className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold mb-2">Leave {team?.name}?</h3>
+            <p className="text-slate-400 text-sm mb-6">Your past entries will stay on the team, but new ones won't.</p>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handleLeaveTeam}
+                disabled={submitting}
+                className="w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold py-3 transition disabled:opacity-50"
+              >
+                {submitting ? "Leaving..." : "Yes, leave"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLeaveTeamModal(false)}
+                className="w-full rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold py-3 transition"
+              >
+                Cancel
               </button>
             </div>
           </div>

@@ -212,10 +212,10 @@ export default function TeamLeaderStats({ teamId }: { teamId: string }) {
         <LeaderCard title="Most Consistent Pisser" entry={leaders.consistent} profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.most24h && (
-        <LeaderCard title="Most Pisses (24h)" entry={leaders.most24h} profileMap={profileMap} liveUser={liveUser} />
+        <LeaderCard title="Most Piss (24h)" entry={leaders.most24h} profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.fewest24h && (
-        <LeaderCard title="Fewest Pisses (24h)" entry={leaders.fewest24h} valueClass="text-red-400" profileMap={profileMap} liveUser={liveUser} />
+        <LeaderCard title="Fewest Piss (24h)" entry={leaders.fewest24h} valueClass="text-red-400" profileMap={profileMap} liveUser={liveUser} />
       )}
     </div>
   )

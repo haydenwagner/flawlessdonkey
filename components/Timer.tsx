@@ -5,6 +5,96 @@ import Link from "next/link"
 import { useTimer } from "../hooks/useTimer"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
+import { getTimerHue, getAnimLightness } from "@/lib/timerColor"
+
+function TimerBorderOverlay({ elapsed }: { elapsed: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+
+  useEffect(() => {
+    const parent = ref.current?.parentElement
+    if (!parent) return
+    const update = () => setSize({ w: parent.offsetWidth, h: parent.offsetHeight })
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(parent)
+    return () => ro.disconnect()
+  }, [])
+
+  const seconds = elapsed / 1000
+  const cycleProgress = (seconds % 20) / 20
+  const hue = getTimerHue(seconds)
+  const bodyLightness = getAnimLightness(seconds)  // 58% → rises to ~70% at 60s → falls to 38% at 80s
+  const { w: W, h: H } = size
+  const r = 16
+  const iW = W - 4
+  const iH = H - 4
+  const perimeter = 2 * (iW + iH) + 2 * r * (Math.PI - 4)
+
+  // First cycle: line grows from 0 to full. After that: stays full, head overlaps.
+  const firstCycle = seconds < 20
+  const bodyLen = firstCycle ? cycleProgress * perimeter : perimeter
+
+  const headLen = 14
+  const wrap = (v: number) => ((v % perimeter) + perimeter) % perimeter
+
+  // Head stays clearly brighter than body; at deep-dark-purple phase, clamp to a visible minimum
+  const headBaseLightness = seconds <= 60 ? 82 : Math.max(65, 82 - ((seconds - 60) / 20) * 17)
+
+  // Past 80s: head pulses to signal we've hit max color
+  const isPastPeak = seconds >= 80
+  const headPulse = isPastPeak ? Math.abs(Math.sin(elapsed / 500)) : 0
+  const currentHeadLen = headLen + headPulse * 20
+  const headStrokeWidth = 4 + headPulse * 4
+  const headLightness = headBaseLightness + headPulse * 15
+
+  // During first cycle, match head to growing body until it reaches full length
+  const headIsGrowing = firstCycle && bodyLen < currentHeadLen
+  const headDashArray = headIsGrowing
+    ? `${bodyLen} ${Math.max(0, perimeter - bodyLen)}`
+    : `${currentHeadLen} ${Math.max(0, perimeter - currentHeadLen)}`
+  const headDashOffset = headIsGrowing ? 0 : wrap(currentHeadLen - cycleProgress * perimeter)
+
+  return (
+    <div ref={ref} className="absolute inset-0 pointer-events-none">
+      {W > 0 && (
+        <svg width={W} height={H} className="absolute inset-0" style={{ overflow: "visible" }}>
+          <defs>
+            <filter id="timer-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {/* Body — grows on first cycle, deepens in purple 60-80s */}
+          <rect
+            x={2} y={2} width={iW} height={iH} rx={r} ry={r}
+            fill="none"
+            stroke={`hsl(${hue}, 90%, ${bodyLightness}%)`}
+            strokeWidth={3}
+            strokeDasharray={`${bodyLen} ${Math.max(0, perimeter - bodyLen)}`}
+            strokeDashoffset={0}
+            strokeLinecap="butt"
+            filter="url(#timer-glow)"
+          />
+          {/* Bright head — brightens 60-80s, pulses past 80s */}
+          <rect
+            x={2} y={2} width={iW} height={iH} rx={r} ry={r}
+            fill="none"
+            stroke={`hsl(${hue}, 100%, ${headLightness}%)`}
+            strokeWidth={headStrokeWidth}
+            strokeDasharray={headDashArray}
+            strokeDashoffset={headDashOffset}
+            strokeLinecap="round"
+            filter="url(#timer-glow)"
+          />
+        </svg>
+      )}
+    </div>
+  )
+}
 
 export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const { running, elapsed, start, stop, reset } = useTimer()
@@ -135,11 +225,14 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
   return (
     <>
       <div className="py-8 text-center">
-        <div className="flex items-baseline justify-center gap-3 mb-10">
-          <span className="text-7xl font-mono font-bold tracking-wider text-yellow-400">
-            {displaySeconds}
-          </span>
-          <span className="text-3xl font-mono font-bold text-yellow-400">s</span>
+        <div className="relative rounded-2xl mb-10 py-4">
+          {!isIdle && <TimerBorderOverlay elapsed={elapsed} />}
+          <div className="flex items-baseline justify-center gap-3">
+            <span className="text-7xl font-mono font-bold tracking-wider text-yellow-400">
+              {displaySeconds}
+            </span>
+            <span className="text-3xl font-mono font-bold text-yellow-400">s</span>
+          </div>
         </div>
 
         <div

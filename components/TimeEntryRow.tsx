@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { formatDuration, formatDateTime, getUserAvatarColor } from "@/lib/utils"
+import { getTimerColor } from "@/lib/timerColor"
 
 export interface TimeEntryRowProps {
   id: string
@@ -77,8 +78,11 @@ export default function TimeEntryRow({ created_at, duration_ms, userId, displayN
             <div className="text-xs text-slate-400">{timeStr}</div>
           </div>
           <div
-            style={{ transition: "color 0.7s ease" }}
-            className={`text-lg font-mono font-bold flex-shrink-0 ${highlighted ? "text-white" : "text-yellow-400"}`}
+            style={{
+              transition: "color 0.7s ease",
+              color: highlighted ? "white" : getTimerColor(duration_ms / 1000),
+            }}
+            className="text-lg font-mono font-bold flex-shrink-0"
           >
             {formatDuration(duration_ms)} s
           </div>

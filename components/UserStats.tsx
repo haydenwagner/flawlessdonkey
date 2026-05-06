@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { formatDuration } from "@/lib/utils"
+import { getTimerColor } from "@/lib/timerColor"
 
 export interface ResultsFilter {
   column: "user_id" | "team_id"
@@ -87,7 +88,7 @@ export default function UserStats({ filter, omitMinMax }: { filter: ResultsFilte
       </div>
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <div className="text-sm text-slate-400 mb-2">Average Piss</div>
-        <div className="text-3xl font-bold text-yellow-400">{formatDuration(stats.averageTime)} s</div>
+        <div className="text-3xl font-bold" style={{ color: getTimerColor(stats.averageTime / 1000) }}>{formatDuration(stats.averageTime)} s</div>
       </div>
       {!omitMinMax && (
         <>
