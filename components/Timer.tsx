@@ -45,7 +45,9 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
           avatar_color: freshUser.user_metadata?.avatar_color ?? null,
           avatar_url: freshUser.user_metadata?.custom_avatar_url ?? null,
           updated_at: new Date().toISOString(),
-        }, { onConflict: "id" })
+        }, { onConflict: "id" }).then(({ error: profileError }) => {
+          if (profileError) console.error("[Timer] Profile upsert failed (pending):", profileError)
+        })
         onSaveSuccess?.()
       } catch (err) {
         console.error("[Timer] Unexpected error saving pending time:", err)
@@ -86,7 +88,9 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
           avatar_color: freshUser.user_metadata?.avatar_color ?? null,
           avatar_url: freshUser.user_metadata?.custom_avatar_url ?? null,
           updated_at: new Date().toISOString(),
-        }, { onConflict: "id" })
+        }, { onConflict: "id" }).then(({ error: profileError }) => {
+          if (profileError) console.error("[Timer] Profile upsert failed:", profileError)
+        })
         reset()
         onSaveSuccess?.()
       }

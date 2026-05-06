@@ -11,5 +11,5 @@ export async function uploadImage(bucket: string, path: string, file: File): Pro
   }
 
   const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path)
-  return publicUrl
+  return `${publicUrl}?t=${Date.now()}`
 }

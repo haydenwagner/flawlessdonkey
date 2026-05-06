@@ -63,6 +63,7 @@ export default function Nav() {
   const [originalSettingsName, setOriginalSettingsName] = useState("")
   const [originalSettingsColor, setOriginalSettingsColor] = useState("")
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
+  const [pendingOpenTeamSettings, setPendingOpenTeamSettings] = useState(false)
 
   // team settings state
   const [teamDescription, setTeamDescription] = useState("")
@@ -75,6 +76,19 @@ export default function Nav() {
     document.body.style.overflow = drawerOpen ? "hidden" : ""
     return () => { document.body.style.overflow = "" }
   }, [drawerOpen])
+
+  useEffect(() => {
+    const handler = () => setPendingOpenTeamSettings(true)
+    window.addEventListener("openNavTeamSettings", handler)
+    return () => window.removeEventListener("openNavTeamSettings", handler)
+  }, [])
+
+  useEffect(() => {
+    if (!pendingOpenTeamSettings) return
+    setPendingOpenTeamSettings(false)
+    setDrawerOpen(true)
+    openTeamSettings()
+  }, [pendingOpenTeamSettings, team])
 
   const avatarColor = user?.user_metadata?.avatar_color || (user?.id ? getUserAvatarColor(user.id) : "bg-slate-500")
   const avatarUrl = (user?.user_metadata?.custom_avatar_url as string | null) ?? null
@@ -145,7 +159,7 @@ export default function Nav() {
         break
       }
       case "team-settings":
-        setView("settings")
+        openSettings()
         break
       case "create-team":
         setView("team-setup")
@@ -314,8 +328,8 @@ export default function Nav() {
       }
 
       await refreshTeam()
-      setTeamImageFile(null)
-      setView("settings")
+      window.dispatchEvent(new CustomEvent("teamSettingsUpdated"))
+      closeDrawer()
     } finally {
       setTeamSettingsSaving(false)
     }

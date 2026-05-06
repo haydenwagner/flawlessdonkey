@@ -45,9 +45,10 @@ export default function HomePage() {
               {team && (
                 <NavCard
                   label={team.name}
-                  sublabel="My Team"
+                  sublabel={team.description || "My Team"}
                   iconBgColor="bg-violet-600"
                   iconContent={team.name[0].toUpperCase()}
+                  iconImageUrl={team.image_url}
                   onClick={() => router.push(`/team/${team.id}`)}
                 />
               )}

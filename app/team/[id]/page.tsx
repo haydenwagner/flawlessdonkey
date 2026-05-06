@@ -11,6 +11,7 @@ import AllTimes from "@/components/AllTimes"
 import TeamActivityChart from "@/components/TeamActivityChart"
 import TeamLeaderStats from "@/components/TeamLeaderStats"
 import GoToTimerCard from "@/components/GoToTimerCard"
+import TeamSetupBanner from "@/components/TeamSetupBanner"
 import type { Team } from "@/components/AuthProvider"
 
 export default function TeamPage() {
@@ -25,10 +26,17 @@ export default function TeamPage() {
   const [userHasTeamEntries, setUserHasTeamEntries] = useState<boolean | null>(null)
   const [copied, setCopied] = useState(false)
   const [showCode, setShowCode] = useState(false)
+  const [teamRefreshTrigger, setTeamRefreshTrigger] = useState(0)
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login")
   }, [user, authLoading, router])
+
+  useEffect(() => {
+    const handler = () => setTeamRefreshTrigger((n) => n + 1)
+    window.addEventListener("teamSettingsUpdated", handler)
+    return () => window.removeEventListener("teamSettingsUpdated", handler)
+  }, [])
 
   useEffect(() => {
     if (!user || !teamId) return
@@ -61,7 +69,7 @@ export default function TeamPage() {
     }
 
     fetchTeam()
-  }, [user, teamId, router])
+  }, [user, teamId, router, teamRefreshTrigger])
 
   useEffect(() => {
     if (!user || !teamId) return
@@ -110,72 +118,88 @@ export default function TeamPage() {
     )
   }
 
+  const inviteCode = (
+    <div className="min-h-8 flex items-center">
+      {showCode ? (
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-2xl font-mono font-bold text-yellow-400 tracking-widest">{team.code}</span>
+          <button type="button" onClick={handleCopyCode} className="text-sm border border-white/20 hover:border-white/40 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition">
+            {copied ? "Copied!" : "Copy"}
+          </button>
+          <button type="button" onClick={() => setShowCode(false)} className="text-sm text-slate-400 hover:text-slate-300 transition underline underline-offset-2 decoration-slate-600">
+            Hide
+          </button>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setShowCode(true)} className="text-sm text-slate-400 hover:text-slate-300 transition underline underline-offset-2 decoration-slate-600">
+          Show invite code
+        </button>
+      )}
+    </div>
+  )
+
+  const bodyContent = (
+    <>
+      {userHasTeamEntries === false && (
+        <GoToTimerCard
+          label="No team piss yet"
+          sublabel="Pisses before joining don't carry over. Head to the timer to record your first team piss."
+        />
+      )}
+      <TeamActivityChart teamId={teamId} />
+      <UserStats filter={{ column: "team_id", value: teamId }} omitMinMax />
+      <TeamLeaderStats teamId={teamId} />
+      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Piss</h2>
+      <AllTimes filter={{ column: "team_id", value: teamId }} />
+    </>
+  )
+
+  if (team.image_url) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+        {/* Full-bleed hero — extends behind nav to the very top */}
+        <div className="relative w-full h-72">
+          <Image src={team.image_url} alt={team.name} fill className="object-cover" priority />
+          {/* Top gradient keeps nav/avatar readable */}
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
+          {/* Bottom gradient keeps team name readable */}
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none" />
+          {/* Nav overlaid at the top */}
+          <div className="absolute inset-x-0 top-0 px-8 pt-8">
+            <div className="max-w-2xl mx-auto">
+              <Nav />
+            </div>
+          </div>
+          {/* Team name and invite code at the bottom */}
+          <div className="absolute inset-x-0 bottom-0 px-8 pb-5">
+            <div className="max-w-2xl mx-auto">
+              <h1 className="text-3xl font-bold break-words mb-2">{team.name}</h1>
+              {inviteCode}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900 w-full">
+          <div className="max-w-2xl mx-auto px-8 pb-8 pt-6">
+            {bodyContent}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8">
       <div className="max-w-2xl mx-auto">
         <Nav />
+        <h1 className="text-3xl font-bold mb-3 break-words">{team.name}</h1>
+        <div className="mb-8">{inviteCode}</div>
 
-        {team.image_url ? (
-          <div className="relative w-full h-48 rounded-2xl overflow-hidden mb-8">
-            <Image src={team.image_url} alt={team.name} fill className="object-cover" priority />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-5">
-              <h1 className="text-3xl font-bold break-words mb-2">{team.name}</h1>
-              <div className="min-h-8 flex items-center">
-                {showCode ? (
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-2xl font-mono font-bold text-yellow-400 tracking-widest">{team.code}</span>
-                    <button type="button" onClick={handleCopyCode} className="text-sm border border-white/20 hover:border-white/40 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition">
-                      {copied ? "Copied!" : "Copy"}
-                    </button>
-                    <button type="button" onClick={() => setShowCode(false)} className="text-sm text-slate-400 hover:text-slate-300 transition underline underline-offset-2 decoration-slate-600">
-                      Hide
-                    </button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setShowCode(true)} className="text-sm text-slate-400 hover:text-slate-300 transition underline underline-offset-2 decoration-slate-600">
-                    Show invite code
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <h1 className="text-3xl font-bold mb-3 break-words">{team.name}</h1>
-            <div className="mb-8 min-h-8 flex items-center">
-              {showCode ? (
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-2xl font-mono font-bold text-yellow-400 tracking-widest">{team.code}</span>
-                  <button type="button" onClick={handleCopyCode} className="text-sm border border-white/20 hover:border-white/40 text-slate-300 hover:text-white px-3 py-1 rounded-lg transition">
-                    {copied ? "Copied!" : "Copy"}
-                  </button>
-                  <button type="button" onClick={() => setShowCode(false)} className="text-sm text-slate-400 hover:text-slate-300 transition underline underline-offset-2 decoration-slate-600">
-                    Hide
-                  </button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => setShowCode(true)} className="text-sm text-slate-400 hover:text-slate-300 transition underline underline-offset-2 decoration-slate-600">
-                  Show invite code
-                </button>
-              )}
-            </div>
-          </>
+        {user?.id === team.created_by && (
+          <TeamSetupBanner />
         )}
 
-        {userHasTeamEntries === false && (
-          <GoToTimerCard
-            label="No team piss yet"
-            sublabel="Pisses before joining don't carry over. Head to the timer to record your first team piss."
-          />
-        )}
-
-        <TeamActivityChart teamId={teamId} />
-        <UserStats filter={{ column: "team_id", value: teamId }} omitMinMax />
-        <TeamLeaderStats teamId={teamId} />
-
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Piss</h2>
-        <AllTimes filter={{ column: "team_id", value: teamId }} />
+        {bodyContent}
       </div>
     </div>
   )
