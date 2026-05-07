@@ -26,7 +26,7 @@ export default function UserDashboardPage() {
         {user && (
           <>
             <UserStats filter={{ column: "user_id", value: user.id }} />
-            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Piss</h2>
+            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Pisses</h2>
             <AllTimes filter={{ column: "user_id", value: user.id }} />
           </>
         )}

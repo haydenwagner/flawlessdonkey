@@ -9,7 +9,7 @@ function normalizeTs(ts: string): number {
   return new Date(s).getTime()
 }
 
-export default function TeamActivityChart({ teamId }: { teamId: string }) {
+export default function TeamActivityChart({ teamId, refreshTrigger }: { teamId: string; refreshTrigger?: number }) {
   const [buckets, setBuckets] = useState<number[]>(Array(24).fill(0))
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -40,7 +40,7 @@ export default function TeamActivityChart({ teamId }: { teamId: string }) {
     }
 
     fetchData()
-  }, [teamId])
+  }, [teamId, refreshTrigger])
 
   const maxCount = Math.max(...buckets, 1)
 

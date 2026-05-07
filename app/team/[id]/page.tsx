@@ -27,6 +27,7 @@ export default function TeamPage() {
   const [copied, setCopied] = useState(false)
   const [showCode, setShowCode] = useState(false)
   const [teamRefreshTrigger, setTeamRefreshTrigger] = useState(0)
+  const [liveRefreshTrigger, setLiveRefreshTrigger] = useState(0)
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login")
@@ -37,6 +38,17 @@ export default function TeamPage() {
     window.addEventListener("teamSettingsUpdated", handler)
     return () => window.removeEventListener("teamSettingsUpdated", handler)
   }, [])
+
+  useEffect(() => {
+    if (!teamId) return
+    const channel = supabase
+      .channel(`team-results-${teamId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "results", filter: `team_id=eq.${teamId}` }, () => {
+        setLiveRefreshTrigger((n) => n + 1)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [teamId])
 
   useEffect(() => {
     if (!user || !teamId) return
@@ -146,11 +158,11 @@ export default function TeamPage() {
           sublabel="Pisses before joining don't carry over. Head to the timer to record your first team piss."
         />
       )}
-      <TeamActivityChart teamId={teamId} />
-      <UserStats filter={{ column: "team_id", value: teamId }} omitMinMax />
-      <TeamLeaderStats teamId={teamId} />
-      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Piss</h2>
-      <AllTimes filter={{ column: "team_id", value: teamId }} />
+      <UserStats filter={{ column: "team_id", value: teamId }} omitMinMax refreshTrigger={liveRefreshTrigger} />
+      <TeamLeaderStats teamId={teamId} refreshTrigger={liveRefreshTrigger} />
+      <TeamActivityChart teamId={teamId} refreshTrigger={liveRefreshTrigger} />
+      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Pisses</h2>
+      <AllTimes filter={{ column: "team_id", value: teamId }} refreshTrigger={liveRefreshTrigger} />
     </>
   )
 

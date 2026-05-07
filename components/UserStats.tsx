@@ -17,7 +17,7 @@ interface Stats {
   shortestTime: number
 }
 
-export default function UserStats({ filter, omitMinMax }: { filter: ResultsFilter; omitMinMax?: boolean }) {
+export default function UserStats({ filter, omitMinMax, refreshTrigger }: { filter: ResultsFilter; omitMinMax?: boolean; refreshTrigger?: number }) {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -59,7 +59,7 @@ export default function UserStats({ filter, omitMinMax }: { filter: ResultsFilte
     }
 
     fetchStats()
-  }, [filter.column, filter.value])
+  }, [filter.column, filter.value, refreshTrigger])
 
   const skeletonCount = omitMinMax ? 2 : 4
 
@@ -83,22 +83,22 @@ export default function UserStats({ filter, omitMinMax }: { filter: ResultsFilte
   return (
     <div className="grid grid-cols-2 gap-4 mb-8">
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <div className="text-sm text-slate-400 mb-2">Total Piss</div>
+        <div className="text-sm text-slate-400 mb-2">Total Pisses</div>
         <div className="text-3xl font-bold text-yellow-400">{stats.totalRuns}</div>
       </div>
       <div className={`rounded-2xl p-5 border ${stats.averageTime / 1000 >= 60 ? "bg-white border-slate-200" : "bg-white/5 border-white/10"}`}>
-        <div className={`text-sm mb-2 ${stats.averageTime / 1000 >= 60 ? "text-slate-700" : "text-slate-400"}`}>Average Piss</div>
+        <div className={`text-sm mb-2 ${stats.averageTime / 1000 >= 60 ? "text-slate-700" : "text-slate-400"}`}>Average Time</div>
         <div className="text-3xl font-bold" style={{ color: getTimerColor(stats.averageTime / 1000) }}>{formatDuration(stats.averageTime)}</div>
       </div>
       {!omitMinMax && (
         <>
           <div className={`rounded-2xl p-5 border ${stats.shortestTime / 1000 >= 60 ? "bg-white border-slate-200" : "bg-white/5 border-white/10"}`}>
             <div className={`text-sm mb-2 ${stats.shortestTime / 1000 >= 60 ? "text-slate-700" : "text-slate-400"}`}>Worst Piss</div>
-            <div className="text-3xl font-bold text-red-400">{formatDuration(stats.shortestTime)}</div>
+            <div className="text-3xl font-bold" style={{ color: getTimerColor(stats.shortestTime / 1000) }}>{formatDuration(stats.shortestTime)}</div>
           </div>
           <div className={`rounded-2xl p-5 border ${stats.longestTime / 1000 >= 60 ? "bg-white border-slate-200" : "bg-white/5 border-white/10"}`}>
             <div className={`text-sm mb-2 ${stats.longestTime / 1000 >= 60 ? "text-slate-700" : "text-slate-400"}`}>Best Piss</div>
-            <div className="text-3xl font-bold text-green-400">{formatDuration(stats.longestTime)}</div>
+            <div className="text-3xl font-bold" style={{ color: getTimerColor(stats.longestTime / 1000) }}>{formatDuration(stats.longestTime)}</div>
           </div>
         </>
       )}

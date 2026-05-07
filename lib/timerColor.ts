@@ -1,22 +1,29 @@
-// Hue scale: red (0s) → green (20s) → blue (40s) → violet-purple (80s, capped)
+// Hue stops aligned to discrete color band boundaries.
+// Cubic ease-in per segment: color lingers near the band's home hue,
+// then rushes to the next hue only in the last ~20% of the band.
 const hueStops: [number, number][] = [
-  [0, 0],
-  [20, 120],
-  [40, 240],
-  [80, 270],
+  [0,   4],   // red
+  [5,   25],  // orange
+  [10,  48],  // yellow
+  [20,  142], // green
+  [25,  213], // light blue
+  [40,  262], // light purple
+  [60,  270], // dark purple
+  [80,  270], // capped
 ]
 
 export function getTimerHue(seconds: number): number {
-  if (seconds <= 0) return 0
-  if (seconds >= 80) return 270
+  if (seconds <= 0) return hueStops[0][1]
+  if (seconds >= hueStops[hueStops.length - 1][0]) return hueStops[hueStops.length - 1][1]
   for (let i = 0; i < hueStops.length - 1; i++) {
     const [t0, h0] = hueStops[i]
     const [t1, h1] = hueStops[i + 1]
     if (seconds <= t1) {
-      return h0 + (h1 - h0) * ((seconds - t0) / (t1 - t0))
+      const t = (seconds - t0) / (t1 - t0)
+      return h0 + (h1 - h0) * (t * t * t) // cubic ease-in
     }
   }
-  return 270
+  return hueStops[hueStops.length - 1][1]
 }
 
 // Lightness arc for the live timer animation (40–80s):

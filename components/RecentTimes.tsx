@@ -64,7 +64,7 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
   if (loading) {
     return (
       <div className="mt-4">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Piss</h2>
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Pisses</h2>
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-4 animate-pulse">
@@ -86,7 +86,7 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
 
   return (
     <div className="mt-4">
-      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Piss</h2>
+      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Pisses</h2>
       <div className="space-y-3">
         {times.map((result) => (
           <TimeEntryRow

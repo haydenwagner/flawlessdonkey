@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import { getProfiles, type CachedProfile } from "@/lib/profileCache"
@@ -18,23 +18,29 @@ interface TimeResult {
 
 const PAGE_SIZE = 10
 
-export default function AllTimes({ filter }: { filter: ResultsFilter }) {
+export default function AllTimes({ filter, refreshTrigger }: { filter: ResultsFilter; refreshTrigger?: number }) {
   const { user } = useAuth()
   const [times, setTimes] = useState<TimeResult[]>([])
   const [profileMap, setProfileMap] = useState<Map<string, CachedProfile>>(new Map())
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
+  const filterKeyRef = useRef("")
 
   const isTeamView = filter.column === "team_id"
 
   useEffect(() => {
     if (!filter.value) return
 
-    setLoading(true)
-    setTimes([])
-    setProfileMap(new Map())
-    setOffset(0)
+    const filterKey = `${filter.column}:${filter.value}`
+    const filterChanged = filterKeyRef.current !== filterKey
+    filterKeyRef.current = filterKey
+
+    if (filterChanged) {
+      setLoading(true)
+      setTimes([])
+      setProfileMap(new Map())
+    }
 
     const fetchTimes = async () => {
       try {
@@ -47,9 +53,10 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
 
         if (error) {
           console.error("[AllTimes] Error fetching times:", error)
-          setTimes([])
+          if (filterChanged) setTimes([])
         } else {
           setTimes(data || [])
+          setOffset(0)
           setHasMore((data?.length || 0) >= PAGE_SIZE)
           if (isTeamView && data && data.length > 0) {
             const ids = [...new Set(data.map((r) => r.user_id).filter(Boolean))] as string[]
@@ -58,14 +65,14 @@ export default function AllTimes({ filter }: { filter: ResultsFilter }) {
         }
       } catch (error) {
         console.error("[AllTimes] Unexpected error:", error)
-        setTimes([])
+        if (filterChanged) setTimes([])
       } finally {
         setLoading(false)
       }
     }
 
     fetchTimes()
-  }, [filter.column, filter.value, isTeamView])
+  }, [filter.column, filter.value, isTeamView, refreshTrigger])
 
   const loadMore = async () => {
     try {

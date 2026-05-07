@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import { getProfiles, type CachedProfile } from "@/lib/profileCache"
 import { formatDuration, getUserAvatarColor } from "@/lib/utils"
+import { getTimerColor } from "@/lib/timerColor"
 
 interface LiveUser {
   id: string
@@ -53,6 +54,7 @@ function LeaderCard({ title, entry, valueClass = "text-yellow-400", profileMap, 
     ? (liveUser.displayName ?? profile?.display_name ?? entry.name)
     : (profile?.display_name ?? entry.name)
   const isDarkPurple = entry.durationMs !== undefined && entry.durationMs / 1000 >= 60
+  const valueColor = entry.durationMs !== undefined ? getTimerColor(entry.durationMs / 1000) : undefined
   return (
     <div
       className="bg-white/5 border border-white/10 rounded-2xl p-4"
@@ -75,7 +77,10 @@ function LeaderCard({ title, entry, valueClass = "text-yellow-400", profileMap, 
           <div className="text-sm font-medium text-white truncate">{displayName}</div>
           {entry.subvalue && <div className="text-xs text-slate-400">{entry.subvalue}</div>}
         </div>
-        <div className={`text-lg font-mono font-bold flex-shrink-0 ${valueClass}`}>
+        <div
+          className={`text-lg font-mono font-bold flex-shrink-0 ${valueColor ? "" : valueClass}`}
+          style={valueColor ? { color: valueColor } : undefined}
+        >
           {entry.value}
         </div>
       </div>
@@ -88,7 +93,7 @@ function normalizeTs(ts: string): number {
   return new Date(s).getTime()
 }
 
-export default function TeamLeaderStats({ teamId }: { teamId: string }) {
+export default function TeamLeaderStats({ teamId, refreshTrigger }: { teamId: string; refreshTrigger?: number }) {
   const { user } = useAuth()
   const liveUser: LiveUser | undefined = user ? {
     id: user.id,
@@ -151,11 +156,11 @@ export default function TeamLeaderStats({ teamId }: { teamId: string }) {
         }
       }
 
-      // Most consistent: lowest coefficient of variation (min 3 entries)
+      // Most consistent: lowest coefficient of variation (min 2 entries)
       let bestCV = Infinity
       let consistent: Entry | null = null
       for (const [userId, { name, durations }] of userMap) {
-        if (durations.length < 3) continue
+        if (durations.length < 2) continue
         const mean = durations.reduce((a, b) => a + b, 0) / durations.length
         const variance = durations.reduce((a, b) => a + (b - mean) ** 2, 0) / durations.length
         const stdDev = Math.sqrt(variance)
@@ -196,7 +201,7 @@ export default function TeamLeaderStats({ teamId }: { teamId: string }) {
     }
 
     fetchData()
-  }, [teamId])
+  }, [teamId, refreshTrigger])
 
   if (loading) {
     return (
@@ -213,19 +218,19 @@ export default function TeamLeaderStats({ teamId }: { teamId: string }) {
   return (
     <div className="space-y-3 mb-8">
       {leaders.best && (
-        <LeaderCard title="Best Piss" entry={leaders.best} valueClass="text-green-400" profileMap={profileMap} liveUser={liveUser} />
+        <LeaderCard title="Best Piss" entry={leaders.best} profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.worst && (
-        <LeaderCard title="Worst Piss" entry={leaders.worst} valueClass="text-red-400" profileMap={profileMap} liveUser={liveUser} />
+        <LeaderCard title="Worst Piss" entry={leaders.worst} profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.consistent && (
         <LeaderCard title="Most Consistent Pisser" entry={leaders.consistent} profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.most24h && (
-        <LeaderCard title="Most Piss (24h)" entry={leaders.most24h} profileMap={profileMap} liveUser={liveUser} />
+        <LeaderCard title="Most Pisses (24h)" entry={leaders.most24h} profileMap={profileMap} liveUser={liveUser} />
       )}
       {leaders.fewest24h && (
-        <LeaderCard title="Fewest Piss (24h)" entry={leaders.fewest24h} valueClass="text-red-400" profileMap={profileMap} liveUser={liveUser} />
+        <LeaderCard title="Fewest Pisses (24h)" entry={leaders.fewest24h} valueClass="text-red-400" profileMap={profileMap} liveUser={liveUser} />
       )}
     </div>
   )
