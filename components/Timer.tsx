@@ -98,15 +98,15 @@ function TimerBorderOverlay({ elapsed }: { elapsed: number }) {
 
 export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const { running, elapsed, start, stop, reset } = useTimer()
-  const { user, team } = useAuth()
+  const { user, team, teamLoading } = useAuth()
   const [saving, setSaving] = useState(false)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
-  const teamRef = useRef(team)
-  useEffect(() => { teamRef.current = team }, [team])
 
-  // When user signs in after hitting the login prompt, save the time they were trying to record
+  // When user signs in after hitting the login prompt, save the time they were trying to record.
+  // Guard on teamLoading so team?.id is settled before we write — avoids saving with team_id: null
+  // when the user is already a team member but the fetch hasn't completed yet.
   useEffect(() => {
-    if (!user) return
+    if (!user || teamLoading) return
     const pending = sessionStorage.getItem("pendingTime")
     if (!pending) return
     const ms = parseInt(pending, 10)
@@ -122,7 +122,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
         const { error } = await supabase.from("results").insert({
           user_id: freshUser.id,
           duration_ms: ms,
-          team_id: teamRef.current?.id ?? null,
+          team_id: team?.id ?? null,
           user_display_name: displayName,
         })
         if (error) {
@@ -144,7 +144,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
       }
     }
     doSave()
-  }, [user, onSaveSuccess])
+  }, [user, teamLoading, onSaveSuccess])
 
   const handleStop = () => {
     stop()

@@ -146,8 +146,9 @@ export default function Nav() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
     closeDrawer()
+    router.push("/")
+    await supabase.auth.signOut()
   }
 
   const handleNavClick = (href: string) => {
@@ -740,7 +741,7 @@ export default function Nav() {
     <>
       <nav className="flex items-center justify-between mb-8">
         <button type="button" onClick={() => handleNavClick("/")} className="text-3xl font-bold hover:text-yellow-400 transition cursor-pointer">
-          <Image src="/logo.png" alt="Site Logo" width={100} height={40} priority />
+          <Image src="/logo.png" alt="Site Logo" width={110} height={40} priority style={{ marginLeft: "-10px" }} />
         </button>
 
         <div style={{ opacity: authLoading ? 0 : 1, transition: "opacity 0.15s ease" }}>
