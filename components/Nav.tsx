@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
@@ -39,7 +39,6 @@ function ImagePlaceholderIcon() {
 
 export default function Nav() {
   const { user, loading: authLoading, hasBeenLoggedIn, team, teamLoading, refreshTeam } = useAuth()
-  const pathname = usePathname()
   const router = useRouter()
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -149,11 +148,6 @@ export default function Nav() {
     closeDrawer()
     router.push("/")
     await supabase.auth.signOut()
-  }
-
-  const handleNavClick = (href: string) => {
-    closeDrawer()
-    if (pathname !== href) router.push(href)
   }
 
   const handleBack = () => {
@@ -416,7 +410,8 @@ export default function Nav() {
                     <circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" />
                   </svg>
                 }
-                onClick={() => handleNavClick("/")}
+                href="/"
+                onClick={closeDrawer}
               />
               <NavCard
                 label="Dashboard"
@@ -427,7 +422,8 @@ export default function Nav() {
                     <polyline points="23,6 13.5,15.5 8.5,10.5 1,18" /><polyline points="17,6 23,6 23,12" />
                   </svg>
                 }
-                onClick={() => handleNavClick("/dashboard")}
+                href="/dashboard"
+                onClick={closeDrawer}
               />
               {teamLoading ? (
                 <div className="rounded-[32px] border border-white/10 bg-white/5 p-5 animate-pulse">
@@ -446,7 +442,8 @@ export default function Nav() {
                   iconBgColor="bg-violet-600"
                   iconImageUrl={team.image_url}
                   iconContent={team.name[0].toUpperCase()}
-                  onClick={() => handleNavClick(`/team/${team.id}`)}
+                  href={`/team/${team.id}`}
+                  onClick={closeDrawer}
                 />
               ) : (
                 <NavCard
@@ -740,9 +737,9 @@ export default function Nav() {
   return (
     <>
       <nav className="flex items-center justify-between mb-8">
-        <button type="button" onClick={() => handleNavClick("/")} className="text-3xl font-bold hover:text-yellow-400 transition cursor-pointer">
+        <Link href="/" onClick={closeDrawer} className="text-3xl font-bold hover:text-yellow-400 transition cursor-pointer">
           <Image src="/logo.png" alt="Site Logo" width={110} height={40} priority style={{ marginLeft: "-10px" }} />
-        </button>
+        </Link>
 
         <div style={{ opacity: authLoading ? 0 : 1, transition: "opacity 0.15s ease" }}>
           {(user || hasBeenLoggedIn) ? (

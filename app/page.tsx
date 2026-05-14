@@ -1,9 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useSWRConfig } from "swr"
 import Timer from "../components/Timer"
-import Nav from "../components/Nav"
 import RecentTimes from "../components/RecentTimes"
 import NavCard from "../components/NavCard"
 import { useAuth } from "@/components/AuthProvider"
@@ -19,28 +17,37 @@ function DashboardIcon() {
 
 export default function HomePage() {
   const { user, team } = useAuth()
-  const router = useRouter()
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const { mutate } = useSWRConfig()
 
   const handleSaveSuccess = () => {
-    setRefreshTrigger((prev) => prev + 1)
+    if (user) {
+      mutate(["userStats", "user_id", user.id])
+      mutate(["allTimes", "user_id", user.id])
+      mutate(["recentTimes", user.id])
+    }
+    if (user && team) {
+      mutate(["userStats", "team_id", team.id])
+      mutate(["allTimes", "team_id", team.id])
+      mutate(["leaders", team.id])
+      mutate(["activity", team.id])
+      mutate(["userHasTeamEntries", team.id, user.id])
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white px-8 pt-28 pb-8">
       <div className="max-w-2xl mx-auto">
-        <Nav />
         <Timer onSaveSuccess={handleSaveSuccess} />
         {user ? (
           <>
-            <RecentTimes refreshTrigger={refreshTrigger} />
+            <RecentTimes />
             <div className="mt-8 space-y-3">
               <NavCard
                 label="My Dashboard"
                 sublabel="Your personal piss"
                 iconBgColor="bg-amber-500"
                 iconContent={<DashboardIcon />}
-                onClick={() => router.push("/dashboard")}
+                href="/dashboard"
               />
               {team && (
                 <NavCard
@@ -49,7 +56,7 @@ export default function HomePage() {
                   iconBgColor="bg-violet-600"
                   iconContent={team.name[0].toUpperCase()}
                   iconImageUrl={team.image_url}
-                  onClick={() => router.push(`/team/${team.id}`)}
+                  href={`/team/${team.id}`}
                 />
               )}
             </div>
@@ -61,14 +68,14 @@ export default function HomePage() {
               sublabel="Log in to track your piss"
               iconBgColor="bg-amber-500"
               iconContent={<DashboardIcon />}
-              onClick={() => router.push("/login")}
+              href="/login"
             />
             <NavCard
               label="Join a Team"
               sublabel="Log in to piss with friends"
               iconBgColor="bg-violet-600"
               iconContent="+"
-              onClick={() => router.push("/login")}
+              href="/login"
             />
           </div>
         )}

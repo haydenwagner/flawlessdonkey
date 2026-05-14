@@ -1,7 +1,6 @@
 "use client"
 
 import { useAuth } from "@/components/AuthProvider"
-import Nav from "@/components/Nav"
 import UserStats from "@/components/UserStats"
 import AllTimes from "@/components/AllTimes"
 import { useRouter } from "next/navigation"
@@ -16,9 +15,8 @@ export default function UserDashboardPage() {
   }, [user, loading, router])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white px-8 pt-28 pb-8">
       <div className="max-w-2xl mx-auto">
-        <Nav />
         <h1 className="text-3xl font-bold mb-6 break-words">
           {user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split("@")[0]}
         </h1>

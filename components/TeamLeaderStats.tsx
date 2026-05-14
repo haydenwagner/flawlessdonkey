@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import useSWR from "swr"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import { getProfiles, type CachedProfile } from "@/lib/profileCache"
@@ -30,6 +30,10 @@ interface Leaders {
   fewest24h: Entry | null
 }
 
+interface FetchResult {
+  leaders: Leaders
+  profileMap: Map<string, CachedProfile>
+}
 
 function LeaderAvatar({ userId, name, avatarUrl, avatarColor }: { userId: string; name: string; avatarUrl?: string | null; avatarColor?: string | null }) {
   const color = avatarColor || getUserAvatarColor(userId)
@@ -93,7 +97,96 @@ function normalizeTs(ts: string): number {
   return new Date(s).getTime()
 }
 
-export default function TeamLeaderStats({ teamId, refreshTrigger }: { teamId: string; refreshTrigger?: number }) {
+async function fetchLeaders(teamId: string): Promise<FetchResult> {
+  const { data: rows } = await supabase
+    .from("results")
+    .select("user_id, user_display_name, duration_ms, created_at")
+    .eq("team_id", teamId)
+    .order("created_at", { ascending: true })
+
+  if (!rows || rows.length === 0) {
+    return {
+      leaders: { best: null, worst: null, consistent: null, most24h: null, fewest24h: null },
+      profileMap: new Map(),
+    }
+  }
+
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000
+  const userMap = new Map<string, { name: string; durations: number[]; count24h: number }>()
+
+  for (const row of rows) {
+    if (!userMap.has(row.user_id)) {
+      userMap.set(row.user_id, { name: "", durations: [], count24h: 0 })
+    }
+    const u = userMap.get(row.user_id)!
+    if (row.user_display_name) u.name = row.user_display_name
+    u.durations.push(row.duration_ms)
+    if (normalizeTs(row.created_at) >= cutoff) u.count24h++
+  }
+
+  for (const [, u] of userMap) {
+    if (!u.name) u.name = "Member"
+  }
+
+  let best: Entry | null = null
+  let worst: Entry | null = null
+  let bestDur = -Infinity
+  let worstDur = Infinity
+
+  for (const [userId, { name, durations }] of userMap) {
+    const max = Math.max(...durations)
+    const min = Math.min(...durations)
+    if (max > bestDur) {
+      bestDur = max
+      best = { userId, name, value: `${formatDuration(max)}`, durationMs: max }
+    }
+    if (min < worstDur) {
+      worstDur = min
+      worst = { userId, name, value: `${formatDuration(min)}`, durationMs: min }
+    }
+  }
+
+  let bestCV = Infinity
+  let consistent: Entry | null = null
+  for (const [userId, { name, durations }] of userMap) {
+    if (durations.length < 2) continue
+    const mean = durations.reduce((a, b) => a + b, 0) / durations.length
+    const variance = durations.reduce((a, b) => a + (b - mean) ** 2, 0) / durations.length
+    const stdDev = Math.sqrt(variance)
+    const cv = stdDev / mean
+    if (cv < bestCV) {
+      bestCV = cv
+      consistent = {
+        userId,
+        name,
+        value: `±${formatDuration(stdDev)}`,
+        subvalue: `avg ${formatDuration(mean)}`,
+      }
+    }
+  }
+
+  const sorted = Array.from(userMap.entries()).sort((a, b) => b[1].count24h - a[1].count24h)
+  const [topId, topUser] = sorted[0]
+  let most24h: Entry | null = null
+  let fewest24h: Entry | null = null
+
+  if (topUser.count24h > 0) {
+    most24h = { userId: topId, name: topUser.name, value: topUser.count24h.toString() }
+    if (sorted.length >= 2) {
+      const [botId, botUser] = sorted[sorted.length - 1]
+      if (botUser.count24h < topUser.count24h) {
+        fewest24h = { userId: botId, name: botUser.name, value: botUser.count24h.toString() }
+      }
+    }
+  }
+
+  const userIds = Array.from(userMap.keys())
+  const profileMap = await getProfiles(userIds)
+
+  return { leaders: { best, worst, consistent, most24h, fewest24h }, profileMap }
+}
+
+export default function TeamLeaderStats({ teamId }: { teamId: string }) {
   const { user } = useAuth()
   const liveUser: LiveUser | undefined = user ? {
     id: user.id,
@@ -101,109 +194,13 @@ export default function TeamLeaderStats({ teamId, refreshTrigger }: { teamId: st
     avatarColor: user.user_metadata?.avatar_color ?? null,
     displayName: user.user_metadata?.display_name || user.user_metadata?.full_name || null,
   } : undefined
-  const [leaders, setLeaders] = useState<Leaders | null>(null)
-  const [profileMap, setProfileMap] = useState<Map<string, CachedProfile>>(new Map())
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: rows } = await supabase
-        .from("results")
-        .select("user_id, user_display_name, duration_ms, created_at")
-        .eq("team_id", teamId)
-        .order("created_at", { ascending: true }) // ascending so last write = most recent name
+  const { data, isLoading } = useSWR(
+    teamId ? ["leaders", teamId] : null,
+    ([, id]) => fetchLeaders(id)
+  )
 
-      if (!rows || rows.length === 0) {
-        setLoading(false)
-        return
-      }
-
-      const cutoff = Date.now() - 24 * 60 * 60 * 1000
-      const userMap = new Map<string, { name: string; durations: number[]; count24h: number }>()
-
-      for (const row of rows) {
-        if (!userMap.has(row.user_id)) {
-          userMap.set(row.user_id, { name: "", durations: [], count24h: 0 })
-        }
-        const u = userMap.get(row.user_id)!
-        // Always update name so the last (most recent) non-null value wins
-        if (row.user_display_name) u.name = row.user_display_name
-        u.durations.push(row.duration_ms)
-        if (normalizeTs(row.created_at) >= cutoff) u.count24h++
-      }
-
-      // Fallback for users whose every record had null display_name
-      for (const [, u] of userMap) {
-        if (!u.name) u.name = "Member"
-      }
-
-      // Best / worst piss (single record, any user)
-      let best: Entry | null = null
-      let worst: Entry | null = null
-      let bestDur = -Infinity
-      let worstDur = Infinity
-
-      for (const [userId, { name, durations }] of userMap) {
-        const max = Math.max(...durations)
-        const min = Math.min(...durations)
-        if (max > bestDur) {
-          bestDur = max
-          best = { userId, name, value: `${formatDuration(max)}`, durationMs: max }
-        }
-        if (min < worstDur) {
-          worstDur = min
-          worst = { userId, name, value: `${formatDuration(min)}`, durationMs: min }
-        }
-      }
-
-      // Most consistent: lowest coefficient of variation (min 2 entries)
-      let bestCV = Infinity
-      let consistent: Entry | null = null
-      for (const [userId, { name, durations }] of userMap) {
-        if (durations.length < 2) continue
-        const mean = durations.reduce((a, b) => a + b, 0) / durations.length
-        const variance = durations.reduce((a, b) => a + (b - mean) ** 2, 0) / durations.length
-        const stdDev = Math.sqrt(variance)
-        const cv = stdDev / mean
-        if (cv < bestCV) {
-          bestCV = cv
-          consistent = {
-            userId,
-            name,
-            value: `±${formatDuration(stdDev)}`,
-            subvalue: `avg ${formatDuration(mean)}`,
-          }
-        }
-      }
-
-      // 24h leaders
-      const sorted = Array.from(userMap.entries()).sort((a, b) => b[1].count24h - a[1].count24h)
-      const [topId, topUser] = sorted[0]
-      let most24h: Entry | null = null
-      let fewest24h: Entry | null = null
-
-      if (topUser.count24h > 0) {
-        most24h = { userId: topId, name: topUser.name, value: topUser.count24h.toString() }
-        if (sorted.length >= 2) {
-          const [botId, botUser] = sorted[sorted.length - 1]
-          if (botUser.count24h < topUser.count24h) {
-            fewest24h = { userId: botId, name: botUser.name, value: botUser.count24h.toString() }
-          }
-        }
-      }
-
-      const userIds = Array.from(userMap.keys())
-      const profiles = await getProfiles(userIds)
-      setProfileMap(profiles)
-
-      setLeaders({ best, worst, consistent, most24h, fewest24h })
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [teamId, refreshTrigger])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-3 mb-8">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -213,7 +210,9 @@ export default function TeamLeaderStats({ teamId, refreshTrigger }: { teamId: st
     )
   }
 
-  if (!leaders) return null
+  if (!data) return null
+
+  const { leaders, profileMap } = data
 
   return (
     <div className="space-y-3 mb-8">

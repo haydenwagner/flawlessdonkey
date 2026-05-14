@@ -1,6 +1,7 @@
 "use client"
 
 import { ReactNode } from "react"
+import Link from "next/link"
 import Image from "next/image"
 
 interface NavCardProps {
@@ -9,11 +10,12 @@ interface NavCardProps {
   iconBgColor: string
   iconContent: ReactNode
   iconImageUrl?: string | null
-  onClick: () => void
+  onClick?: () => void
+  href?: string
   onDismiss?: () => void
 }
 
-export default function NavCard({ label, sublabel, iconBgColor, iconContent, iconImageUrl, onClick, onDismiss }: NavCardProps) {
+export default function NavCard({ label, sublabel, iconBgColor, iconContent, iconImageUrl, onClick, href, onDismiss }: NavCardProps) {
   const icon = (
     <div className={`h-14 w-14 rounded-3xl flex-shrink-0 flex items-center justify-center text-2xl font-bold text-white overflow-hidden ${iconImageUrl ? "" : iconBgColor}`}>
       {iconImageUrl ? (
@@ -29,18 +31,26 @@ export default function NavCard({ label, sublabel, iconBgColor, iconContent, ico
     </div>
   )
 
+  const mainClassName = "flex-1 flex items-center gap-4 p-5 text-left transition hover:bg-white/5 min-w-0"
+  const standaloneClassName = "w-full flex items-center gap-4 rounded-[32px] border border-white/10 bg-white/10 p-5 text-left transition hover:bg-white/15 mb-6"
+  const chevron = <div className="text-slate-500 text-xl flex-shrink-0">›</div>
+
   if (onDismiss) {
     return (
       <div className="w-full rounded-[32px] border border-white/10 bg-white/10 mb-6 flex items-center overflow-hidden">
-        <button
-          type="button"
-          onClick={onClick}
-          className="flex-1 flex items-center gap-4 p-5 text-left transition hover:bg-white/5 min-w-0"
-        >
-          {icon}
-          {text}
-          <div className="text-slate-500 text-xl flex-shrink-0">›</div>
-        </button>
+        {href ? (
+          <Link href={href} onClick={onClick} className={mainClassName}>
+            {icon}
+            {text}
+            {chevron}
+          </Link>
+        ) : (
+          <button type="button" onClick={onClick} className={mainClassName}>
+            {icon}
+            {text}
+            {chevron}
+          </button>
+        )}
         <div className="w-px self-stretch bg-white/10 flex-shrink-0" />
         <button
           type="button"
@@ -54,17 +64,21 @@ export default function NavCard({ label, sublabel, iconBgColor, iconContent, ico
     )
   }
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full rounded-[32px] border border-white/10 bg-white/10 p-5 text-left transition hover:bg-white/15 mb-6"
-    >
-      <div className="flex items-center gap-4">
+  if (href) {
+    return (
+      <Link href={href} onClick={onClick} className={standaloneClassName}>
         {icon}
         {text}
-        <div className="text-slate-500 text-xl flex-shrink-0">›</div>
-      </div>
+        {chevron}
+      </Link>
+    )
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={standaloneClassName}>
+      {icon}
+      {text}
+      {chevron}
     </button>
   )
 }

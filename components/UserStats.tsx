@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import useSWR from "swr"
 import { supabase } from "@/lib/supabaseClient"
 import { formatDuration } from "@/lib/utils"
 import { getTimerColor } from "@/lib/timerColor"
@@ -17,53 +17,36 @@ interface Stats {
   shortestTime: number
 }
 
-export default function UserStats({ filter, omitMinMax, refreshTrigger }: { filter: ResultsFilter; omitMinMax?: boolean; refreshTrigger?: number }) {
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [loading, setLoading] = useState(true)
+async function fetchStats(column: string, value: string): Promise<Stats> {
+  const { data, error } = await supabase
+    .from("results")
+    .select("duration_ms")
+    .eq(column, value)
 
-  useEffect(() => {
-    if (!filter.value) return
+  if (error) throw error
 
-    const fetchStats = async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from("results")
-          .select("duration_ms")
-          .eq(filter.column, filter.value)
+  if (!data || data.length === 0) {
+    return { totalRuns: 0, averageTime: 0, longestTime: 0, shortestTime: 0 }
+  }
 
-        if (error) {
-          console.error("[UserStats] Error fetching stats:", error)
-          setStats(null)
-          return
-        }
+  const durations = data.map((r) => r.duration_ms)
+  const totalRuns = durations.length
+  const averageTime = durations.reduce((a, b) => a + b, 0) / totalRuns
+  const longestTime = Math.max(...durations)
+  const shortestTime = Math.min(...durations)
 
-        if (!data || data.length === 0) {
-          setStats({ totalRuns: 0, averageTime: 0, longestTime: 0, shortestTime: 0 })
-          return
-        }
+  return { totalRuns, averageTime, longestTime, shortestTime }
+}
 
-        const durations = data.map((r) => r.duration_ms)
-        const totalRuns = durations.length
-        const averageTime = durations.reduce((a, b) => a + b, 0) / totalRuns
-        const longestTime = Math.max(...durations)
-        const shortestTime = Math.min(...durations)
-
-        setStats({ totalRuns, averageTime, longestTime, shortestTime })
-      } catch (error) {
-        console.error("[UserStats] Unexpected error:", error)
-        setStats(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchStats()
-  }, [filter.column, filter.value, refreshTrigger])
+export default function UserStats({ filter, omitMinMax }: { filter: ResultsFilter; omitMinMax?: boolean }) {
+  const { data: stats, isLoading, error } = useSWR(
+    filter.value ? ["userStats", filter.column, filter.value] : null,
+    ([, column, value]) => fetchStats(column, value)
+  )
 
   const skeletonCount = omitMinMax ? 2 : 4
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-2 gap-4 mb-8">
         {Array.from({ length: skeletonCount }).map((_, i) => (
@@ -76,7 +59,7 @@ export default function UserStats({ filter, omitMinMax, refreshTrigger }: { filt
     )
   }
 
-  if (!stats) {
+  if (error || !stats) {
     return <div className="text-slate-400">Unable to load stats.</div>
   }
 

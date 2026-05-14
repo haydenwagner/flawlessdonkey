@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useRef, useState } from "react"
+import useSWR from "swr"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import TimeEntryRow from "@/components/TimeEntryRow"
@@ -11,57 +12,39 @@ interface TimeResult {
   duration_ms: number
 }
 
-export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: number }) {
+async function fetchRecentTimes(userId: string): Promise<TimeResult[]> {
+  const { data, error } = await supabase
+    .from("results")
+    .select("id, created_at, duration_ms")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(5)
+  if (error) throw error
+  return data || []
+}
+
+export default function RecentTimes() {
   const { user } = useAuth()
-  const [times, setTimes] = useState<TimeResult[]>([])
-  const [loading, setLoading] = useState(true)
-  const [newId, setNewId] = useState<string | null>(null)
+  const { data: times, isLoading } = useSWR(
+    user ? ["recentTimes", user.id] : null,
+    ([, id]) => fetchRecentTimes(id)
+  )
+
   const prevFirstIdRef = useRef<string | null>(null)
-  const hasLoadedRef = useRef(false)
+  const [newId, setNewId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      return
+  const firstId = times?.[0]?.id ?? null
+  if (firstId !== prevFirstIdRef.current) {
+    const wasPopulated = prevFirstIdRef.current !== null
+    prevFirstIdRef.current = firstId
+    if (wasPopulated && firstId) {
+      setNewId(firstId)
+    } else {
+      setNewId(null)
     }
+  }
 
-    const fetchRecentTimes = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("results")
-          .select("id, created_at, duration_ms")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(5)
-
-        if (error) {
-          console.error("[RecentTimes] Error fetching results:", error)
-          setTimes([])
-        } else {
-          const results = data || []
-          setTimes(results)
-
-          const firstId = results[0]?.id ?? null
-          if (hasLoadedRef.current && firstId && firstId !== prevFirstIdRef.current) {
-            setNewId(firstId)
-          } else {
-            setNewId(null)
-          }
-          prevFirstIdRef.current = firstId
-          hasLoadedRef.current = true
-        }
-      } catch (error) {
-        console.error("[RecentTimes] Unexpected error:", error)
-        setTimes([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchRecentTimes()
-  }, [user, refreshTrigger])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="mt-4">
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Pisses</h2>
@@ -80,7 +63,7 @@ export default function RecentTimes({ refreshTrigger }: { refreshTrigger?: numbe
     )
   }
 
-  if (times.length === 0) {
+  if (!times || times.length === 0) {
     return <div className="text-slate-400 mt-8">No times saved yet.</div>
   }
 

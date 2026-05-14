@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
+import useSWR from "swr"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import { getProfiles, type CachedProfile } from "@/lib/profileCache"
@@ -18,97 +19,72 @@ interface TimeResult {
 
 const PAGE_SIZE = 10
 
-export default function AllTimes({ filter, refreshTrigger }: { filter: ResultsFilter; refreshTrigger?: number }) {
-  const { user } = useAuth()
-  const [times, setTimes] = useState<TimeResult[]>([])
-  const [profileMap, setProfileMap] = useState<Map<string, CachedProfile>>(new Map())
-  const [loading, setLoading] = useState(true)
-  const [hasMore, setHasMore] = useState(true)
-  const [offset, setOffset] = useState(0)
-  const filterKeyRef = useRef("")
+async function fetchFirstPage(column: string, value: string): Promise<TimeResult[]> {
+  const { data, error } = await supabase
+    .from("results")
+    .select("id, created_at, duration_ms, user_id, user_display_name")
+    .eq(column, value)
+    .order("created_at", { ascending: false })
+    .range(0, PAGE_SIZE - 1)
+  if (error) throw error
+  return data || []
+}
 
+export default function AllTimes({ filter }: { filter: ResultsFilter }) {
+  const { user } = useAuth()
   const isTeamView = filter.column === "team_id"
 
+  const { data: firstPage, isLoading } = useSWR(
+    filter.value ? ["allTimes", filter.column, filter.value] : null,
+    ([, column, value]) => fetchFirstPage(column, value)
+  )
+
+  const [extra, setExtra] = useState<TimeResult[]>([])
+  const [hasMore, setHasMore] = useState(true)
+  const [profileMap, setProfileMap] = useState<Map<string, CachedProfile>>(new Map())
+
   useEffect(() => {
-    if (!filter.value) return
-
-    const filterKey = `${filter.column}:${filter.value}`
-    const filterChanged = filterKeyRef.current !== filterKey
-    filterKeyRef.current = filterKey
-
-    if (filterChanged) {
-      setLoading(true)
-      setTimes([])
-      setProfileMap(new Map())
+    if (!firstPage) return
+    setExtra([])
+    setHasMore(firstPage.length >= PAGE_SIZE)
+    if (isTeamView) {
+      const ids = [...new Set(firstPage.map((r) => r.user_id).filter(Boolean))] as string[]
+      if (ids.length) getProfiles(ids).then(setProfileMap)
     }
+  }, [firstPage, isTeamView])
 
-    const fetchTimes = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("results")
-          .select("id, created_at, duration_ms, user_id, user_display_name")
-          .eq(filter.column, filter.value)
-          .order("created_at", { ascending: false })
-          .range(0, PAGE_SIZE - 1)
-
-        if (error) {
-          console.error("[AllTimes] Error fetching times:", error)
-          if (filterChanged) setTimes([])
-        } else {
-          setTimes(data || [])
-          setOffset(0)
-          setHasMore((data?.length || 0) >= PAGE_SIZE)
-          if (isTeamView && data && data.length > 0) {
-            const ids = [...new Set(data.map((r) => r.user_id).filter(Boolean))] as string[]
-            getProfiles(ids).then(setProfileMap)
-          }
-        }
-      } catch (error) {
-        console.error("[AllTimes] Unexpected error:", error)
-        if (filterChanged) setTimes([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTimes()
-  }, [filter.column, filter.value, isTeamView, refreshTrigger])
+  const times = [...(firstPage || []), ...extra]
 
   const loadMore = async () => {
-    try {
-      const newOffset = offset + PAGE_SIZE
-      const { data, error } = await supabase
-        .from("results")
-        .select("id, created_at, duration_ms, user_id, user_display_name")
-        .eq(filter.column, filter.value)
-        .order("created_at", { ascending: false })
-        .range(newOffset, newOffset + PAGE_SIZE - 1)
+    const offset = times.length
+    const { data, error } = await supabase
+      .from("results")
+      .select("id, created_at, duration_ms, user_id, user_display_name")
+      .eq(filter.column, filter.value)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1)
 
-      if (error) {
-        console.error("[AllTimes] Error loading more:", error)
-        return
-      }
+    if (error) {
+      console.error("[AllTimes] Error loading more:", error)
+      return
+    }
 
-      setTimes((prev) => [...prev, ...(data || [])])
-      setOffset(newOffset)
-      setHasMore((data?.length || 0) >= PAGE_SIZE)
+    setExtra((prev) => [...prev, ...(data || [])])
+    setHasMore((data?.length || 0) >= PAGE_SIZE)
 
-      if (isTeamView && data && data.length > 0) {
-        const ids = [...new Set(data.map((r) => r.user_id).filter(Boolean))] as string[]
-        getProfiles(ids).then((newProfiles) => {
-          setProfileMap((prev) => {
-            const next = new Map(prev)
-            newProfiles.forEach((p: CachedProfile, id: string) => next.set(id, p))
-            return next
-          })
+    if (isTeamView && data && data.length > 0) {
+      const ids = [...new Set(data.map((r) => r.user_id).filter(Boolean))] as string[]
+      getProfiles(ids).then((newProfiles) => {
+        setProfileMap((prev) => {
+          const next = new Map(prev)
+          newProfiles.forEach((p, id) => next.set(id, p))
+          return next
         })
-      }
-    } catch (error) {
-      console.error("[AllTimes] Unexpected error loading more:", error)
+      })
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-3">
         {Array.from({ length: 10 }).map((_, i) => (

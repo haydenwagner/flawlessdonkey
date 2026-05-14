@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import NavCard from "@/components/NavCard"
 
 function TimerIcon() {
@@ -13,14 +12,13 @@ function TimerIcon() {
 }
 
 export default function GoToTimerCard({ label, sublabel }: { label: string; sublabel: string }) {
-  const router = useRouter()
   return (
     <NavCard
       label={label}
       sublabel={sublabel}
       iconBgColor="bg-green-600"
       iconContent={<TimerIcon />}
-      onClick={() => router.push("/")}
+      href="/"
     />
   )
 }

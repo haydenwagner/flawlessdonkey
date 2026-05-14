@@ -1,50 +1,48 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import useSWR from "swr"
 import { supabase } from "@/lib/supabaseClient"
 
 function normalizeTs(ts: string): number {
-  // Ensure the string is parsed as UTC — same fix as formatDateTime in utils.ts
   const s = /[Zz]$|[+-]\d{2}:\d{2}$/.test(ts) ? ts : ts + "Z"
   return new Date(s).getTime()
 }
 
-export default function TeamActivityChart({ teamId, refreshTrigger }: { teamId: string; refreshTrigger?: number }) {
-  const [buckets, setBuckets] = useState<number[]>(Array(24).fill(0))
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
+async function fetchActivity(teamId: string): Promise<{ buckets: number[]; total: number }> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data } = await supabase
+    .from("results")
+    .select("created_at")
+    .eq("team_id", teamId)
+    .gte("created_at", cutoff)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      const { data } = await supabase
-        .from("results")
-        .select("created_at")
-        .eq("team_id", teamId)
-        .gte("created_at", cutoff)
+  const counts = Array(24).fill(0)
+  const now = Date.now()
+  let total = 0
 
-      const counts = Array(24).fill(0)
-      const now = Date.now()
-
-      if (data) {
-        for (const row of data) {
-          const hoursAgo = (now - normalizeTs(row.created_at)) / 3_600_000
-          if (hoursAgo < 0 || hoursAgo >= 24) continue // skip if parsed incorrectly
-          counts[23 - Math.floor(hoursAgo)]++
-        }
-        setTotal(data.length)
-      }
-
-      setBuckets(counts)
-      setLoading(false)
+  if (data) {
+    for (const row of data) {
+      const hoursAgo = (now - normalizeTs(row.created_at)) / 3_600_000
+      if (hoursAgo < 0 || hoursAgo >= 24) continue
+      counts[23 - Math.floor(hoursAgo)]++
     }
+    total = data.length
+  }
 
-    fetchData()
-  }, [teamId, refreshTrigger])
+  return { buckets: counts, total }
+}
 
+export default function TeamActivityChart({ teamId }: { teamId: string }) {
+  const { data, isLoading } = useSWR(
+    teamId ? ["activity", teamId] : null,
+    ([, id]) => fetchActivity(id)
+  )
+
+  const buckets = data?.buckets ?? Array(24).fill(0)
+  const total = data?.total ?? 0
   const maxCount = Math.max(...buckets, 1)
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="mb-8">
         <div className="flex items-baseline justify-between mb-3">
