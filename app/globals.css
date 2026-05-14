@@ -32,3 +32,14 @@ body {
 button:disabled {
   @apply opacity-50 cursor-not-allowed;
 }
+
+@keyframes tick-up {
+  from {
+    transform: translateY(60%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

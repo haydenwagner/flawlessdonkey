@@ -96,7 +96,7 @@ function TimerBorderOverlay({ elapsed }: { elapsed: number }) {
   )
 }
 
-export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
+export default function Timer({ onSaveSuccess }: { onSaveSuccess?: (durationMs: number) => void }) {
   const { running, elapsed, start, stop, reset } = useTimer()
   const { user, team, teamLoading } = useAuth()
   const [saving, setSaving] = useState(false)
@@ -138,7 +138,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
         }, { onConflict: "id" }).then(({ error: profileError }) => {
           if (profileError) console.error("[Timer] Profile upsert failed (pending):", profileError)
         })
-        onSaveSuccess?.()
+        onSaveSuccess?.(ms)
       } catch (err) {
         console.error("[Timer] Unexpected error saving pending time:", err)
       }
@@ -182,7 +182,7 @@ export default function Timer({ onSaveSuccess }: { onSaveSuccess?: () => void })
           if (profileError) console.error("[Timer] Profile upsert failed:", profileError)
         })
         reset()
-        onSaveSuccess?.()
+        onSaveSuccess?.(elapsed)
       }
     } catch (error) {
       console.error("[Timer] Error saving result:", error)

@@ -5,6 +5,7 @@ import Timer from "../components/Timer"
 import RecentTimes from "../components/RecentTimes"
 import NavCard from "../components/NavCard"
 import { useAuth } from "@/components/AuthProvider"
+import type { Stats } from "@/components/UserStats"
 
 function DashboardIcon() {
   return (
@@ -19,17 +20,24 @@ export default function HomePage() {
   const { user, team } = useAuth()
   const { mutate } = useSWRConfig()
 
-  const handleSaveSuccess = () => {
+  const handleSaveSuccess = (durationMs: number) => {
     if (user) {
-      mutate(["userStats", "user_id", user.id])
+      mutate(["userStats", "user_id", user.id], (prev: Stats | undefined) =>
+        prev ? { ...prev, totalDuration: prev.totalDuration + durationMs, totalRuns: prev.totalRuns + 1 } : undefined,
+        { revalidate: false }
+      )
       mutate(["allTimes", "user_id", user.id])
       mutate(["recentTimes", user.id])
+      mutate(["activity", "user_id", user.id])
     }
     if (user && team) {
-      mutate(["userStats", "team_id", team.id])
+      mutate(["userStats", "team_id", team.id], (prev: Stats | undefined) =>
+        prev ? { ...prev, totalDuration: prev.totalDuration + durationMs, totalRuns: prev.totalRuns + 1 } : undefined,
+        { revalidate: false }
+      )
       mutate(["allTimes", "team_id", team.id])
       mutate(["leaders", team.id])
-      mutate(["activity", team.id])
+      mutate(["activity", "team_id", team.id])
       mutate(["userHasTeamEntries", team.id, user.id])
     }
   }

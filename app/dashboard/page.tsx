@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/AuthProvider"
 import UserStats from "@/components/UserStats"
+import TeamActivityChart from "@/components/TeamActivityChart"
 import AllTimes from "@/components/AllTimes"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
@@ -24,6 +25,7 @@ export default function UserDashboardPage() {
         {user && (
           <>
             <UserStats filter={{ column: "user_id", value: user.id }} />
+            <TeamActivityChart filter={{ column: "user_id", value: user.id }} />
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Pisses</h2>
             <AllTimes filter={{ column: "user_id", value: user.id }} />
           </>

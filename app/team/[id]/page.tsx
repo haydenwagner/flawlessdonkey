@@ -13,6 +13,7 @@ import TeamLeaderStats from "@/components/TeamLeaderStats"
 import GoToTimerCard from "@/components/GoToTimerCard"
 import TeamSetupBanner from "@/components/TeamSetupBanner"
 import type { Team } from "@/components/AuthProvider"
+import type { Stats } from "@/components/UserStats"
 
 async function fetchTeam(teamId: string): Promise<Team> {
   const { data, error } = await supabase
@@ -75,11 +76,15 @@ export default function TeamPage() {
     if (!teamId) return
     const channel = supabase
       .channel(`team-results-${teamId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "results", filter: `team_id=eq.${teamId}` }, () => {
-        mutate(["userStats", "team_id", teamId])
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "results", filter: `team_id=eq.${teamId}` }, (payload) => {
+        const durationMs = (payload.new as { duration_ms?: number }).duration_ms ?? 0
+        mutate(["userStats", "team_id", teamId], (prev: Stats | undefined) =>
+          prev ? { ...prev, totalDuration: prev.totalDuration + durationMs, totalRuns: prev.totalRuns + 1 } : undefined,
+          { revalidate: false }
+        )
         mutate(["allTimes", "team_id", teamId])
         mutate(["leaders", teamId])
-        mutate(["activity", teamId])
+        mutate(["activity", "team_id", teamId])
         if (user) mutate(["userHasTeamEntries", teamId, user.id])
       })
       .subscribe()
@@ -133,7 +138,7 @@ export default function TeamPage() {
       )}
       <UserStats filter={{ column: "team_id", value: teamId }} omitMinMax />
       <TeamLeaderStats teamId={teamId} />
-      <TeamActivityChart teamId={teamId} />
+      <TeamActivityChart filter={{ column: "team_id", value: teamId }} />
       <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">All Pisses</h2>
       <AllTimes filter={{ column: "team_id", value: teamId }} />
     </>

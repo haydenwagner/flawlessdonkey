@@ -8,12 +8,12 @@ function normalizeTs(ts: string): number {
   return new Date(s).getTime()
 }
 
-async function fetchActivity(teamId: string): Promise<{ buckets: number[]; total: number }> {
+async function fetchActivity(column: string, value: string): Promise<{ buckets: number[]; total: number }> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data } = await supabase
     .from("results")
     .select("created_at")
-    .eq("team_id", teamId)
+    .eq(column, value)
     .gte("created_at", cutoff)
 
   const counts = Array(24).fill(0)
@@ -32,10 +32,14 @@ async function fetchActivity(teamId: string): Promise<{ buckets: number[]; total
   return { buckets: counts, total }
 }
 
-export default function TeamActivityChart({ teamId }: { teamId: string }) {
+interface ActivityChartProps {
+  filter: { column: "team_id" | "user_id"; value: string }
+}
+
+export default function TeamActivityChart({ filter }: ActivityChartProps) {
   const { data, isLoading } = useSWR(
-    teamId ? ["activity", teamId] : null,
-    ([, id]) => fetchActivity(id)
+    filter.value ? ["activity", filter.column, filter.value] : null,
+    ([, col, val]) => fetchActivity(col, val)
   )
 
   const buckets = data?.buckets ?? Array(24).fill(0)
