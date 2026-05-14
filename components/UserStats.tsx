@@ -86,7 +86,7 @@ export default function UserStats({ filter, omitMinMax }: { filter: ResultsFilte
         <div className="relative mb-4">
           <div className="absolute left-0 w-1/4 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent to-white/20" />
           <div className="absolute right-0 w-1/4 top-1/2 -translate-y-1/2 h-px bg-gradient-to-l from-transparent to-white/20" />
-          <div className="relative w-1/2 mx-auto bg-white/5 border border-white/10 rounded-2xl p-5 animate-pulse">
+          <div className="relative w-full sm:w-1/2 mx-auto bg-white/5 border border-white/10 rounded-2xl p-5 animate-pulse">
             <div className="h-3 bg-slate-700 rounded w-24 mb-4 mx-auto"></div>
             <div className="h-10 bg-slate-700 rounded w-36 mx-auto"></div>
           </div>
@@ -114,7 +114,7 @@ export default function UserStats({ filter, omitMinMax }: { filter: ResultsFilte
         <div className="absolute left-0 w-1/4 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent to-white/20" />
         <div className="absolute right-0 w-1/4 top-1/2 -translate-y-1/2 h-px bg-gradient-to-l from-transparent to-white/20" />
         {/* 50% centered card */}
-        <div className="relative w-1/2 mx-auto bg-white/5 border border-white/10 rounded-2xl p-5 text-center shadow-[0_0_32px_0_rgba(255,255,255,0.05)]">
+        <div className="relative w-full sm:w-1/2 mx-auto bg-white/5 border border-white/10 rounded-2xl p-5 text-center shadow-[0_0_32px_0_rgba(255,255,255,0.05)]">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Total Time Pissed</div>
           <div className="flex items-baseline justify-center gap-4 overflow-hidden">
             {stats.totalDuration === 0 ? (
